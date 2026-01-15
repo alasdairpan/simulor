@@ -37,7 +37,7 @@ Quick Start:
     >>> results = engine.run(start='2020-01-01', end='2023-12-31', mode='backtest')
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.0b1"
 __author__ = "Simulor Contributors"
 
 import simulor.logging
