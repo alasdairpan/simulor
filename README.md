@@ -20,17 +20,12 @@ pip install simulor
 
 ```python
 from decimal import Decimal
-from simulor import Strategy
-from simulor.alpha.models import MACrossover
-from simulor.portfolio import EqualWeight
-from simulor.portfolio.multi_strategy import MultiStrategyPortfolio
-from simulor.risk import PositionLimit
-from simulor.execution import Immediate
-from simulor.universe import Static
-from simulor.data import CSVDataProvider, Resolution
-from simulor.engine import Engine
-from simulor.analytics import Tearsheet
-from simulor.core.types import Instrument
+from pathlib import Path
+from simulor import (
+    Strategy, Engine, Fund,
+    MovingAverageCrossover, EqualWeight, PositionLimit, Immediate, Static,
+    CsvFeed, SimulatedBroker, Resolution, Instrument, Tearsheet
+)
 
 # Define strategy with pluggable components
 # Workflow: Universe Selection -> Alpha Model -> Portfolio Construction -> Risk Management -> Execution
@@ -41,21 +36,21 @@ strategy = Strategy(
         Instrument.stock('QQQ'),
         Instrument.stock('IWM')
     ]),
-    alpha=MACrossover(fast_period=10, slow_period=20),
+    alpha=MovingAverageCrossover(fast_period=10, slow_period=20),
     construction=EqualWeight(),
     risk=PositionLimit(max_position=Decimal('0.1')),
     execution=Immediate()
 )
 
-# Create portfolio with strategy
-portfolio = MultiStrategyPortfolio(
-    strategies=[strategy], # Add more strategies as needed
-    capital=Decimal('100000')
-)
-
 # Run backtest
-data_provider = CSVDataProvider(path='data/', resolution=Resolution.DAILY)
-engine = Engine(data=data_provider, portfolio=portfolio)
+engine = Engine(
+    data=CsvFeed(path=Path('data/bars.csv'), resolution=Resolution.DAILY),
+    fund=Fund(
+        strategies=[strategy],  # Add more strategies as needed
+        capital=Decimal('100000')
+    ),
+    broker=SimulatedBroker()
+)
 results = engine.run(
     start='2020-01-01',
     end='2025-12-31',
@@ -92,6 +87,10 @@ tearsheet.save('tearsheet.html')
 - [ ] Advanced analytics (execution quality, attribution)
 - [ ] ML integration and model registry
 - [ ] Broker integrations for live trading
+
+## Acknowledgments
+
+Simulor implements the industry-standard modular pipeline architecture (Universe Selection → Alpha Generation → Portfolio Construction → Risk Management → Execution). This separation of concerns allows for maximum flexibility, testability, and maintainability, similar to the architecture found in institutional quantitative systems and platforms like Lean.
 
 ## Contributing
 

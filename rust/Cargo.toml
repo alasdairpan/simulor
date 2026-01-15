@@ -1,0 +1,18 @@
+[package]
+edition = "2021"
+name = "simulor-rust"
+rust-version = "1.70"
+version = "0.1.0"
+
+[lib]
+crate-type = ["cdylib"]
+name = "_simulor_rust"
+
+[dependencies]
+pyo3 = {version = "0.27", features = ["extension-module", "abi3-py312"]}
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+strip = true

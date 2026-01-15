@@ -1,0 +1,177 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=68.0", "wheel"]
+
+[project]
+authors = [
+  {name = "Simulor Contributors"},
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Rust",
+  "Topic :: Office/Business :: Financial :: Investment",
+  "Topic :: Scientific/Engineering",
+]
+description = "Production-ready event-driven backtesting framework with institutional-grade analytics"
+keywords = ["backtesting", "trading", "quantitative", "finance", "algorithmic-trading"]
+license = {text = "MIT"}
+name = "simulor"
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.1.0-alpha"
+
+dependencies = [
+  "numpy>=1.24.0",
+  "pandas>=2.0.0",
+  "pyarrow>=12.0.0",
+  "polars>=0.19.0",
+  "plotly>=5.14.0",
+  "pydantic>=2.0.0",
+  "python-dateutil>=2.8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "pytest-xdist>=3.3.0",
+  "hypothesis>=6.82.0",
+  "ruff>=0.1.0",
+  "mypy>=1.5.0",
+  "black>=23.7.0",
+  "pre-commit>=3.3.0",
+]
+docs = [
+  "sphinx>=7.0.0",
+  "sphinx-rtd-theme>=1.3.0",
+  "myst-parser>=2.0.0",
+]
+jupyter = [
+  "jupyter>=1.0.0",
+  "ipywidgets>=8.0.0",
+  "matplotlib>=3.7.0",
+]
+longport = [
+  "longport>=3.0.20",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/alasdairpan/simulor/issues"
+Documentation = "https://simulor.readthedocs.io"
+Homepage = "https://github.com/alasdairpan/simulor"
+Repository = "https://github.com/alasdairpan/simulor"
+
+[tool.setuptools.packages.find]
+include = ["simulor*"]
+where = ["src"]
+
+[tool.setuptools.package-data]
+simulor = ["py.typed"]
+
+# Ruff configuration
+[tool.ruff]
+line-length = 120
+src = ["src", "tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+ignore = [
+  "E501", # line too long (handled by black)
+  "B008", # do not perform function calls in argument defaults
+  "C901", # too complex
+]
+select = [
+  "E", # pycodestyle errors
+  "W", # pycodestyle warnings
+  "F", # pyflakes
+  "I", # isort
+  "B", # flake8-bugbear
+  "C4", # flake8-comprehensions
+  "UP", # pyupgrade
+  "ARG", # flake8-unused-arguments
+  "SIM", # flake8-simplify
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"] # Allow unused imports in __init__.py
+"tests/**/*.py" = ["ARG", "S101"] # Allow unused args and assert in tests
+
+[tool.ruff.lint.isort]
+known-first-party = ["simulor"]
+
+# Mypy configuration
+[tool.mypy]
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+python_version = "3.12"
+strict = true
+strict_equality = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+  "plotly.*",
+  "polars.*",
+  "pyarrow.*",
+]
+
+# Pytest configuration
+[tool.pytest.ini_options]
+addopts = [
+  "-ra",
+  "--strict-markers",
+  "--strict-config",
+  "--cov=simulor",
+  "--cov-report=term-missing",
+  "--cov-report=html",
+  "--cov-report=xml",
+]
+markers = [
+  "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+  "integration: marks tests as integration tests",
+  "unit: marks tests as unit tests",
+]
+minversion = "7.0"
+python_classes = ["Test*"]
+python_files = ["test_*.py", "*_test.py"]
+python_functions = ["test_*"]
+testpaths = ["tests"]
+
+# Coverage configuration
+[tool.coverage.run]
+branch = true
+omit = [
+  "*/tests/*",
+  "*/test_*.py",
+  "*/__pycache__/*",
+]
+parallel = true
+source = ["src"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover",
+  "def __repr__",
+  "if TYPE_CHECKING:",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "@abstractmethod",
+  "@abc.abstractmethod",
+]
+precision = 2
+show_missing = true
+skip_covered = false
