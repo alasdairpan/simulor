@@ -1,6 +1,13 @@
 # Simulor
 
+[![PyPI](https://img.shields.io/pypi/v/simulor.svg)](https://pypi.org/project/simulor/)
+[![Python Version](https://img.shields.io/pypi/pyversions/simulor.svg)](https://pypi.org/project/simulor/)
+[![License](https://img.shields.io/github/license/alasdairpan/simulor.svg)](https://github.com/alasdairpan/simulor/blob/main/LICENSE)
+[![CI](https://github.com/alasdairpan/simulor/workflows/CI/badge.svg)](https://github.com/alasdairpan/simulor/actions)
+
 Simulor is a sophisticated backtesting framework designed for quantitative traders and researchers who demand institutional-grade realism and performance. Built on an event-driven architecture with pluggable components, it seamlessly transitions from historical backtesting to paper trading and live execution.
+
+> **⚠️ Active Development**: Simulor is currently in beta. APIs may change before v1.0. We welcome feedback and contributions!
 
 ## Key Features
 
