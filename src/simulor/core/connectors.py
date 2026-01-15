@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 from simulor.core.events import EventBus
 from simulor.logging import get_logger
-from simulor.portfolio.manager import Portfolio
 from simulor.types.orders import OrderSpec
 
 if TYPE_CHECKING:

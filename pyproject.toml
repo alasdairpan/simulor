@@ -126,6 +126,7 @@ module = [
   "plotly.*",
   "polars.*",
   "pyarrow.*",
+  "longport.*",
 ]
 
 # Pytest configuration

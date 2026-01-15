@@ -148,7 +148,7 @@ class Longport(Broker):
             # SimulorOrderType.TRAILING_STOP_LIMIT: LongportOrderType.Unknown,
         }
         try:
-            return mapping[order_type]
+            return mapping[order_type]  # type: ignore[no-any-return]
         except KeyError as e:
             raise ValueError(f"Unsupported order type for Longport: {order_type}") from e
 
@@ -165,7 +165,7 @@ class Longport(Broker):
             SimulorOrderSide.SELL: LongportOrderSide.Sell,
         }
         try:
-            return mapping[order_side]
+            return mapping[order_side]  # type: ignore[no-any-return]
         except KeyError as e:
             raise ValueError(f"Unsupported order side for Longport: {order_side}") from e
 
@@ -186,7 +186,7 @@ class Longport(Broker):
             # SimulorTimeInForce.FOK: LongportTimeInForce.Unknown,
         }
         try:
-            return mapping[time_in_force]
+            return mapping[time_in_force]  # type: ignore[no-any-return]
         except KeyError as e:
             raise ValueError(f"Unsupported time in force for Longport: {time_in_force}") from e
 

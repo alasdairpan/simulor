@@ -68,7 +68,8 @@ class Feed(ABC):
         self._event_bus = event_bus
 
     @abstractmethod
-    def run(self) -> None: ...
+    def run(self) -> None:
+        ...
 
     def start(self) -> None:
         """Start the feed in a separate thread."""

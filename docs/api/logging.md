@@ -196,7 +196,7 @@ logging.basicConfig(
 
 # Detailed alpha logs
 logging.getLogger('simulor.alpha').setLevel(logging.DEBUG)
- 
+
 # Detailed risk management
 logging.getLogger('simulor.risk').setLevel(logging.DEBUG)
 

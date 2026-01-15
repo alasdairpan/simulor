@@ -13,7 +13,7 @@ jobs:
         run: |
           echo "PR Title: ${{ github.event.pull_request.title }}"
           # Add any custom PR title validation here if needed
-  
+
   changes:
     name: Detect Changes
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       rust: ${{ steps.filter.outputs.rust }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -46,22 +46,22 @@ jobs:
     if: needs.changes.outputs.python == 'true'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      
+
       - name: Quick lint check
         run: |
           ruff check src/simulor/
-      
+
       - name: Quick test run
         run: |
           pytest tests/ -x --tb=short
