@@ -38,12 +38,10 @@ class ReadOnlySequence(Sequence[T]):
         self._data = data
 
     @overload
-    def __getitem__(self, index: int) -> T:
-        ...
+    def __getitem__(self, index: int) -> T: ...
 
     @overload
-    def __getitem__(self, index: slice) -> ReadOnlySequence[T]:
-        ...
+    def __getitem__(self, index: slice) -> ReadOnlySequence[T]: ...
 
     def __getitem__(self, index: int | slice) -> T | ReadOnlySequence[T]:
         if isinstance(index, slice):
