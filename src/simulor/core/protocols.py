@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
     from simulor.alpha.signal import Signal
+    from simulor.core.connectors import Connector
     from simulor.core.events import DataEvent, EventBus, MarketEvent
     from simulor.data.market_store import MarketStore
     from simulor.portfolio.manager import Portfolio
@@ -61,23 +62,101 @@ class Model:
 
 
 class Feed(ABC):
-    _event_bus: EventBus
+    """Base class for data feeds that publish market events.
 
-    def set_event_bus(self, event_bus: EventBus) -> None:
-        """Set the event bus for this feed."""
+    Feeds are responsible for:
+    - Streaming market data from various sources (files, APIs, brokers)
+    - Publishing DataEvent objects to the event bus
+    - Managing their own lifecycle (start/stop/reconnect if applicable)
+
+    Feeds may optionally use a Connector for external data sources that
+    require connection management (broker APIs, databases, etc.).
+    """
+
+    def __init__(self, connector: Connector | None = None):
+        """Initialize feed with optional connector.
+
+        Args:
+            connector: Optional connector for external data sources requiring
+                connection management (e.g., broker APIs, databases)
+        """
+        self._event_bus: EventBus | None = None
+        self._connector = connector
+
+    def initialize(self, event_bus: EventBus) -> None:
+        """Set the event bus for publishing market data events.
+
+        Args:
+            event_bus: Event bus to publish events to
+        """
         self._event_bus = event_bus
 
     @abstractmethod
-    def run(self) -> None: ...
+    def stream(self) -> None:
+        """Stream market data and publish events to the event bus.
+
+        Main data processing loop. Implementations should:
+        1. Read/receive market data from source
+        2. Create DataEvent objects containing ticks/bars
+        3. Call publish_event() to send events to engine
+        4. Publish EndOfStreamEvent when data stream completes
+
+        This method is called by start() in a background thread, or can
+        be called directly for synchronous processing.
+        """
+        ...
 
     def start(self) -> None:
-        """Start the feed in a separate thread."""
-        thread = threading.Thread(target=self.run, daemon=True)
+        """Start streaming data in a background daemon thread.
+
+        Spawns a new thread that calls stream(). The thread is daemonized
+        so it won't prevent the program from exiting.
+
+        For synchronous processing, call stream() directly instead.
+        """
+        thread = threading.Thread(target=self.stream, daemon=True)
         thread.start()
 
     def publish_event(self, event: DataEvent) -> None:
-        """Publish a data event to the event bus."""
+        """Publish a market data event to the event bus.
+
+        Args:
+            event: Data event to publish (typically MarketEvent or EndOfStreamEvent)
+
+        Raises:
+            RuntimeError: If event bus has not been set via initialize()
+        """
+        if self._event_bus is None:
+            raise RuntimeError("Event bus not set. Call initialize() first.")
         self._event_bus.publish(event)
+
+    # Connection lifecycle management - delegates to connector if present
+
+    def connect(self) -> None:
+        """Connect to external data source if connector is used.
+
+        Delegates to the connector's connect() method if one was provided.
+        For feeds without connectors (e.g., file-based), this is a no-op.
+        """
+        if self._connector:
+            self._connector.connect()
+
+    def disconnect(self) -> None:
+        """Disconnect from external data source if connector is used.
+
+        Delegates to the connector's disconnect() method if one was provided.
+        For feeds without connectors, this is a no-op.
+        """
+        if self._connector:
+            self._connector.disconnect()
+
+    def is_connected(self) -> bool:
+        """Check if feed is connected to its data source.
+
+        Returns:
+            True if connected (or no connector needed), False otherwise
+        """
+        return self._connector.is_connected() if self._connector else True
 
 
 class UniverseSelectionModel(Model, ABC):

@@ -1,4 +1,4 @@
-"""Simulor: Production-ready event-driven backtesting framework.
+"""Simulor: Event-driven backtesting framework.
 
 Simulor is a high-performance backtesting framework designed for institutional-grade
 quantitative research and algorithmic trading strategy development.

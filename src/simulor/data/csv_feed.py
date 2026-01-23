@@ -40,6 +40,7 @@ class CsvFeed(Feed):
                 Defaults to "instrument_type".
             timezone: Timezone of the timestamps in the CSV. Defaults to "UTC".
         """
+        super().__init__()  # CSV feed doesn't need a connector
         self._provider = CSVDataProvider(
             path=path,
             resolution=resolution,
@@ -51,23 +52,14 @@ class CsvFeed(Feed):
         self._running = False
         self._last_timestamp: datetime | None = None
 
-    def start(self) -> None:
-        """Start the feed.
-
-        Initializes the feed and prepares it for event publishing.
-        Calls the superclass `start` method to handle any base initialization.
-        """
-        logger.debug("Starting CsvFeed, publishing market events from CSV files")
-        return super().start()
-
-    def run(self) -> None:
-        """Run the feed loop.
+    def stream(self) -> None:
+        """Stream market events from CSV files.
 
         Iterates through the `CSVDataProvider` to retrieve `MarketEvent`s and publishes
-        them to the event bus. It continues until the provider is exhausted or `stop()`
+        them to the event bus. Continues until the provider is exhausted or `stop()`
         is called.
 
-        When the feed finishes (or is stopped), it publishes an `EndOfStreamEvent`.
+        When the feed finishes (or is stopped), publishes an `EndOfStreamEvent`.
         """
         self._running = True
         try:

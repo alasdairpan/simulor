@@ -17,7 +17,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Investment",
   "Topic :: Scientific/Engineering",
 ]
-description = "Production-ready event-driven backtesting framework with institutional-grade analytics"
+description = "Event-driven backtesting framework with institutional-grade analytics"
 keywords = ["backtesting", "trading", "quantitative", "finance", "algorithmic-trading"]
 license = {text = "MIT"}
 name = "simulor"

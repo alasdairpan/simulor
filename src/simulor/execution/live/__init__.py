@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from simulor.execution.live.longport import Longport, LongportConnector
+from simulor.execution.live.connectors import LongbridgeConnector
+from simulor.execution.live.longbridge import Longbridge
 
 __all__ = [
-    "LongportConnector",
-    "Longport",
+    "LongbridgeConnector",
+    "Longbridge",
 ]

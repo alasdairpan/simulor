@@ -21,7 +21,7 @@
 # Level 1 QuoteTick
 QuoteTick(
     timestamp=datetime(2024, 1, 15, 9, 30, 1, 523000),
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.TICK,
     bid_price=Decimal("150.24"),  # Top of bid side
     bid_size=Decimal("500"),      # Volume at best bid
@@ -32,7 +32,7 @@ QuoteTick(
 # Level 1 TradeTick
 TradeTick(
     timestamp=datetime(2024, 1, 15, 9, 30, 1, 524000),
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.TICK,
     price=Decimal("150.25"),  # Execution price
     size=Decimal("100")       # Trade volume
