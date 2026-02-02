@@ -52,6 +52,12 @@ if TYPE_CHECKING:
 
     from simulor.execution.live.connectors import LongbridgeConnector
 
+# Import AdjustType at runtime for use in default parameter values
+try:
+    from longport.openapi import AdjustType
+except ImportError:
+    AdjustType = None  # type: ignore[assignment,misc]
+
 logger = get_logger(__name__)
 
 __all__ = ["LongbridgeLiveFeed", "LongbridgeCandlestickFeed"]
@@ -539,7 +545,7 @@ class LongbridgeCandlestickFeed(Feed):
         resolution: Resolution,
         start_date: date,
         end_date: date | None = None,
-        adjust_type: type[AdjustType] = AdjustType.NoAdjust,
+        adjust_type: AdjustType = AdjustType.NoAdjust,  # type: ignore[assignment]
         update_interval: timedelta | None = None,
     ):
         """Initialize Longbridge candlestick feed.
@@ -729,7 +735,7 @@ class LongbridgeCandlestickFeed(Feed):
                 candlesticks = quote_ctx.history_candlesticks_by_date(
                     symbol=symbol,
                     period=period,  # type: ignore[arg-type]
-                    adjust_type=self._adjust_type,
+                    adjust_type=self._adjust_type, # type: ignore[arg-type]
                     start=start_date,
                     end=end_date,
                 )
@@ -762,7 +768,7 @@ class LongbridgeCandlestickFeed(Feed):
                     candlesticks = quote_ctx.history_candlesticks_by_date(
                         symbol=symbol,
                         period=period,  # type: ignore[arg-type]
-                        adjust_type=self._adjust_type,
+                        adjust_type=self._adjust_type, # type: ignore[arg-type]
                         start=current_start,
                         end=chunk_end,
                     )
@@ -958,7 +964,7 @@ class LongbridgeCandlestickFeed(Feed):
                 candlesticks = quote_ctx.history_candlesticks_by_offset(
                     symbol=symbol,
                     period=period,  # type: ignore[arg-type]
-                    adjust_type=self._adjust_type,
+                    adjust_type=self._adjust_type,  # type: ignore[arg-type]
                     forward=True,  # Get bars after the specified time
                     count=100,  # Fetch up to 100 new bars
                     time=self._fetched_until,  # Start from last fetched timestamp

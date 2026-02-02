@@ -258,6 +258,6 @@ class Longbridge(Broker):
             resolution=resolution,
             start_date=start_date,
             end_date=end_date,
-            adjust_type=adjust_type,
+            adjust_type=adjust_type,  # type: ignore[arg-type]
             update_interval=update_interval,
         )
