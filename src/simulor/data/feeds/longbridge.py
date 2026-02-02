@@ -38,9 +38,17 @@ from simulor.data.feeds.live import DataType
 from simulor.logging import get_logger
 from simulor.types import AssetType, Instrument, MarketData, QuoteTick, Resolution, TickDirection, TradeBar, TradeTick
 
+# Import longport types - required for this module
+try:
+    from longport.openapi import AdjustType
+except ImportError as e:
+    raise ImportError(
+        "Longbridge data feeds require the 'longport' package. "
+        "Install it with: pip install 'simulor[longport]'"
+    ) from e
+
 if TYPE_CHECKING:
     from longport.openapi import (
-        AdjustType,
         Candlestick,
         Period,
         PushBrokers,

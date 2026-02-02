@@ -26,12 +26,19 @@ from simulor.types import OrderSide as SimulorOrderSide
 from simulor.types import OrderType as SimulorOrderType
 from simulor.types import TimeInForce as SimulorTimeInForce
 
-if TYPE_CHECKING:
+# Import longport types - required for this module
+try:
     from longport.openapi import AdjustType, Config
     from longport.openapi import OrderSide as LongportOrderSide
     from longport.openapi import OrderType as LongportOrderType
     from longport.openapi import TimeInForceType as LongportTimeInForce
+except ImportError as e:
+    raise ImportError(
+        "Longbridge integration requires the 'longport' package. "
+        "Install it with: pip install 'simulor[longport]'"
+    ) from e
 
+if TYPE_CHECKING:
     from simulor.data.feeds.longbridge import LongbridgeCandlestickFeed, LongbridgeLiveFeed
 
 logger = get_logger(__name__)
