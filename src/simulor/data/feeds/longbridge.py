@@ -23,7 +23,9 @@ Setup:
 
 from __future__ import annotations
 
+import logging
 import threading
+from collections.abc import Sequence
 from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -192,11 +194,6 @@ class LongbridgeFeed(Feed):
                     continue
 
                 try:
-                    # Subscribe with initial push to get current state
-                    quote_ctx.subscribe([symbol], [sub_type])
-                    logger.info(f"Subscribed {symbol} to {data_type}")
-                except TypeError:
-                    # Fallback if is_first_push parameter is not supported
                     quote_ctx.subscribe([symbol], [sub_type])
                     logger.info(f"Subscribed {symbol} to {data_type}")
                 except Exception as e:
@@ -285,14 +282,15 @@ class LongbridgeFeed(Feed):
             asset_type=AssetType.STOCK,
         )
 
-    def publish_market_data(self, data: MarketData) -> None:
+    def publish_market_data(self, data: Sequence[MarketData], timestamp: datetime) -> None:
         """Publish market data as a MarketEvent.
 
         Args:
             data: Market data to publish (TradeTick, QuoteTick, TradeBar, QuoteBar)
         """
-        event = MarketEvent(time=data.timestamp)
-        event.add(data)
+        event = MarketEvent(time=timestamp)
+        for market_data in data:
+            event.add(market_data)
         self.publish_event(event)
 
     def stream(self) -> None:
@@ -343,39 +341,18 @@ class LongbridgeFeed(Feed):
             symbol: Security symbol (e.g., '700.HK')
             quote: Quote data
         """
-        try:
-            instrument = self._from_longport_symbol(symbol)
+        # Currently, we do not publish quote updates as separate ticks.
+        # Quote data is used in depth updates for best bid/ask.
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Received PushQuote for {symbol}: {quote}")
 
-            # Get timestamp from quote
-            ts = quote.timestamp
-
-            # Skip publishing if we don't have proper bid/ask data
-            # PushQuote from longport doesn't always have bid/ask prices
-            # We need depth data for accurate bid/ask quotes
-            # Only publish if quote has valid bid/ask attributes
-            if not hasattr(quote, 'bid_price') or not hasattr(quote, 'ask_price'):
-                logger.debug(f"Skipping quote for {symbol}: no bid/ask data available")
-                return
-
-            if quote.bid_price is None or quote.ask_price is None:
-                logger.debug(f"Skipping quote for {symbol}: bid/ask prices are None")
-                return
-
-            tick = QuoteTick(
-                timestamp=ts,
-                instrument=instrument,
-                resolution=Resolution.TICK,
-                bid_price=Decimal(str(quote.bid_price)),
-                ask_price=Decimal(str(quote.ask_price)),
-                bid_size=Decimal(str(quote.bid_size)) if hasattr(quote, 'bid_size') and quote.bid_size else Decimal('0'),
-                ask_size=Decimal(str(quote.ask_size)) if hasattr(quote, 'ask_size') and quote.ask_size else Decimal('0'),
-            )
-
-            self.publish_market_data(tick)
-
-        except Exception as e:
-            logger.exception(f"Error processing quote for {symbol}: {e}")
-
+    # TODO: Introduce a proper order-book data type and publish it here.
+    # - Define `BookLevel` and `OrderBook` dataclasses in `simulor.types.market_data`.
+    # - Convert `depth.bids`/`depth.asks` into `BookLevel(price, size, orders?)` using
+    #   `level.price` and `level.volume` (do NOT use `position`).
+    # - Publish an `OrderBook` (multi-level) first, then a derived `QuoteTick`
+    #   (top-of-book) for backward compatibility.
+    # - Include sequence/timestamp from `depth` if provided to preserve ordering.
     def _on_depth_callback(self, symbol: str, depth: PushDepth) -> None:
         """Handle order book depth update from Longport.
 
@@ -383,6 +360,9 @@ class LongbridgeFeed(Feed):
             symbol: Security symbol
             depth: Depth data
         """
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Received PushDepth for {symbol}: {depth}")
+
         try:
             instrument = self._from_longport_symbol(symbol)
 
@@ -391,8 +371,9 @@ class LongbridgeFeed(Feed):
                 best_bid = depth.bids[0]  # First bid (highest price)
                 best_ask = depth.asks[0]  # First ask (lowest price)
 
+                timestamp = datetime.now(tz=ZoneInfo("UTC"))
                 tick = QuoteTick(
-                    timestamp=datetime.now(tz=ZoneInfo("UTC")),
+                    timestamp=timestamp,
                     instrument=instrument,
                     resolution=Resolution.TICK,
                     bid_price=Decimal(str(best_bid.position)),
@@ -401,7 +382,7 @@ class LongbridgeFeed(Feed):
                     ask_size=Decimal(str(best_ask.volume)),
                 )
 
-                self.publish_market_data(tick)
+                self.publish_market_data(data=[tick], timestamp=timestamp)
 
         except Exception as e:
             logger.exception(f"Error processing depth for {symbol}: {e}")
@@ -413,8 +394,12 @@ class LongbridgeFeed(Feed):
             symbol: Security symbol
             trades: Trade data from Longport (can be PushTrades or list[Trade])
         """
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Received PushTrades for {symbol}: {trades}")
+
         try:
             instrument = self._from_longport_symbol(symbol)
+            tick_map: dict[datetime, list[TradeTick]] = {}
 
             for trade in trades.trades:
                 tick = TradeTick(
@@ -425,22 +410,27 @@ class LongbridgeFeed(Feed):
                     size=Decimal(trade.volume),
                     direction=self._parse_trade_direction(trade.direction),  # type: ignore[arg-type]
                 )
+                # Group ticks by timestamp
+                tick_map.setdefault(trade.timestamp, []).append(tick)
 
-                self.publish_market_data(tick)
+            # Publish grouped ticks
+            for timestamp, ticks in sorted(tick_map.items()):
+                self.publish_market_data(data=ticks, timestamp=timestamp)
 
         except Exception as e:
             logger.exception(f"Error processing trades for {symbol}: {e}")
 
-    def _on_brokers_callback(self, symbol: str, _brokers: PushBrokers) -> None:
+    def _on_brokers_callback(self, symbol: str, brokers: PushBrokers) -> None:
         """Handle broker queue update from Longport.
 
         Args:
             symbol: Security symbol
-            _brokers: Broker data (unused in base implementation)
+            brokers: Broker data
         """
         # Broker queue data could be used for additional analysis
         # Not implemented in this basic version
-        logger.debug(f"Received broker data for {symbol}")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(f"Received PushBrokers for {symbol}: {brokers}")
 
     def _parse_trade_direction(self, trade_direction: TradeDirection) -> TickDirection:
         """Parse trade direction enum.
