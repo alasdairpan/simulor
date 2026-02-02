@@ -3,6 +3,11 @@
 This example demonstrates live trading using real-time market data and
 real order execution through Longbridge's API.
 
+This file also showcases different feed options - uncomment the desired feed:
+    - Option 1 (default): Live tick feed for real-time tick-by-tick data
+    - Option 2: Candlestick feed in historical bulk mode (for backtesting)
+    - Option 3: Candlestick feed in periodic update mode (near-real-time bars)
+
 Requirements:
     - Longbridge OpenAPI account with trading permissions
     - longport package installed: pip install longport
@@ -21,19 +26,19 @@ Execution: Real orders through Longbridge broker
 """
 
 import logging
+from datetime import date
 from decimal import Decimal
 
-from longport.openapi import Config
+from longport.openapi import AdjustType, Config
 
 from simulor.alpha import MovingAverageCrossover
-from simulor.data.feeds import DataType
 from simulor.engine import Engine
 from simulor.execution import Immediate
 from simulor.execution.live.longbridge import Longbridge
 from simulor.portfolio import EqualWeight, Fund
 from simulor.risk import PositionLimit
 from simulor.strategy import Strategy
-from simulor.types import Instrument
+from simulor.types import Instrument, Resolution
 from simulor.universe import Static
 
 
@@ -75,10 +80,45 @@ def main() -> None:
 
     broker = Longbridge(config=Config.from_env())
 
-    feed = broker.live_feed(
+    # ========================================================================
+    # FEED OPTIONS: Uncomment ONE of the following options
+    # ========================================================================
+
+    # Option 1: Live Tick Feed (Real-time tick-by-tick data)
+    # - Use for: Live trading with immediate market data
+    # - Data: Quotes, trades, order book depth
+    # - Mode: Runs continuously until stopped
+    # feed = broker.live_feed(
+    #     instruments=instruments,
+    #     data_types=[DataType.QUOTE, DataType.TRADE, DataType.DEPTH],
+    # )
+
+    # Option 2: Candlestick Feed - Historical Bulk Mode
+    # - Use for: Backtesting with historical bar data
+    # - Data: OHLCV bars for specified date range
+    # - Mode: Fetches all data, publishes chronologically, then completes
+    feed = broker.candlestick_feed(
         instruments=instruments,
-        data_types=[DataType.QUOTE, DataType.TRADE, DataType.DEPTH],
+        resolution=Resolution.DAILY,
+        start_date=date(2025, 1, 1),
+        end_date=date(2025, 12, 31),
+        adjust_type=AdjustType.NoAdjust,  # or AdjustType.ForwardAdjust
     )
+
+    # Option 3: Candlestick Feed - Periodic Update Mode
+    # - Use for: Near-real-time bar-based strategies
+    # - Data: OHLCV bars with periodic updates
+    # - Mode: Fetches history + polls for new bars at specified interval
+    # feed = broker.candlestick_feed(
+    #     instruments=instruments,
+    #     resolution=Resolution.MINUTE,
+    #     start_date=date.today(),
+    #     end_date=None,  # Open-ended
+    #     update_interval=timedelta(minutes=1),  # Update every minute
+    #     adjust_type=AdjustType.NoAdjust,
+    # )
+
+    # ========================================================================
 
     # Create strategy with conservative risk limits
     strategy = Strategy(

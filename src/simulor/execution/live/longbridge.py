@@ -2,36 +2,37 @@
 
 This module provides the Longbridge broker implementation for order execution.
 The broker uses a shared connector to avoid duplicate connections when used
-together with LongbridgeLiveFeed.
+together with LongbridgeLiveFeed and LongbridgeCandlestickFeed.
 
 Architecture:
     LongbridgeConnector (shared, from connectors.py)
         ├── QuoteContext (market data)
         └── TradeContext (order execution)
-                ↓                    ↓
-          LongbridgeLiveFeed       Longbridge (Broker)
+                ↓                    ↓                           ↓
+          LongbridgeLiveFeed    LongbridgeCandlestickFeed   Longbridge (Broker)
 """
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.data.feeds import DataType
 from simulor.execution.live.connectors import LongbridgeConnector
 from simulor.logging import get_logger
-from simulor.types import Instrument, OrderSpec
+from simulor.types import Instrument, OrderSpec, Resolution
 from simulor.types import OrderSide as SimulorOrderSide
 from simulor.types import OrderType as SimulorOrderType
 from simulor.types import TimeInForce as SimulorTimeInForce
 
 if TYPE_CHECKING:
-    from longport.openapi import Config
+    from longport.openapi import AdjustType, Config
     from longport.openapi import OrderSide as LongportOrderSide
     from longport.openapi import OrderType as LongportOrderType
     from longport.openapi import TimeInForceType as LongportTimeInForce
 
-    from simulor.data.feeds.longbridge import LongbridgeLiveFeed
+    from simulor.data.feeds.longbridge import LongbridgeCandlestickFeed, LongbridgeLiveFeed
 
 logger = get_logger(__name__)
 
@@ -48,12 +49,21 @@ class Longbridge(Broker):
 
     Example:
         >>> from longport.openapi import Config
+        >>> from datetime import date
         >>> # Create broker (connector is created internally)
         >>> broker = Longbridge(config=Config.from_env())
         >>> broker.connect()
         >>>
-        >>> # Create feed using broker's connector
-        >>> feed = broker.live_feed(instruments=[...], data_types=[...])
+        >>> # Create live tick feed using broker's connector
+        >>> live_feed = broker.live_feed(instruments=[...], data_types=[...])
+        >>>
+        >>> # Create candlestick feed using broker's connector
+        >>> candlestick_feed = broker.candlestick_feed(
+        ...     instruments=[...],
+        ...     resolution=Resolution.DAILY,
+        ...     start_date=date(2024, 1, 1),
+        ...     end_date=date(2024, 12, 31),
+        ... )
     """
 
     def __init__(self, config: Config) -> None:
@@ -109,7 +119,7 @@ class Longbridge(Broker):
             # SimulorOrderType.TRAILING_STOP_LIMIT: LongportOrderType.Unknown,
         }
         try:
-            return mapping[order_type]  # type: ignore[return-value]
+            return mapping[order_type]
         except KeyError as e:
             raise ValueError(f"Unsupported order type for Longport: {order_type}") from e
 
@@ -126,7 +136,7 @@ class Longbridge(Broker):
             SimulorOrderSide.SELL: LongportOrderSide.Sell,
         }
         try:
-            return mapping[order_side]  # type: ignore[return-value]
+            return mapping[order_side]
         except KeyError as e:
             raise ValueError(f"Unsupported order side for Longport: {order_side}") from e
 
@@ -147,7 +157,7 @@ class Longbridge(Broker):
             # SimulorTimeInForce.FOK: LongportTimeInForce.Unknown,
         }
         try:
-            return mapping[time_in_force]  # type: ignore[return-value]
+            return mapping[time_in_force]
         except KeyError as e:
             raise ValueError(f"Unsupported time in force for Longport: {time_in_force}") from e
 
@@ -155,10 +165,10 @@ class Longbridge(Broker):
         """Submit an `OrderSpec` to Longport and return the resulting order id."""
         resp = self._connector.trade_context.submit_order(
             symbol=f"{order_spec.instrument.symbol}.{order_spec.instrument.exchange}",
-            order_type=self._to_longport_order_type(order_spec.order_type),  # type: ignore[arg-type]
-            side=self._to_longport_order_side(order_spec.side),  # type: ignore[arg-type]
+            order_type=self._to_longport_order_type(order_spec.order_type),
+            side=self._to_longport_order_side(order_spec.side),
             submitted_quantity=order_spec.quantity,
-            time_in_force=self._to_longport_time_in_force(order_spec.time_in_force),  # type: ignore[arg-type]
+            time_in_force=self._to_longport_time_in_force(order_spec.time_in_force),
             submitted_price=order_spec.limit_price,
             trigger_price=order_spec.stop_price,
         )
@@ -183,6 +193,9 @@ class Longbridge(Broker):
         Returns:
             LongbridgeLiveFeed instance using this broker's connector.
         """
+        # Import here to avoid circular dependency
+        from simulor.data.feeds.longbridge import LongbridgeLiveFeed
+
         # Create feed
         feed = LongbridgeLiveFeed(connector=self._connector)
 
@@ -190,3 +203,61 @@ class Longbridge(Broker):
         feed.subscribe(instruments, data_types)
 
         return feed
+
+    def candlestick_feed(
+        self,
+        instruments: list[Instrument],
+        resolution: Resolution,
+        start_date: date,
+        end_date: date | None = None,
+        adjust_type: type[AdjustType] = AdjustType.NoAdjust,
+        update_interval: timedelta | None = None,
+    ) -> LongbridgeCandlestickFeed:
+        """Create a LongbridgeCandlestickFeed using the shared connector.
+
+        Args:
+            instruments: List of instruments to fetch data for
+            resolution: Bar resolution (MINUTE, HOUR, or DAILY)
+            start_date: Start date for historical data
+            end_date: End date for historical data (None = open-ended for periodic mode)
+            adjust_type: Price adjustment type (AdjustType.NoAdjust or AdjustType.ForwardAdjust)
+            update_interval: If set, enables periodic update mode (e.g., timedelta(minutes=1))
+
+        Returns:
+            LongbridgeCandlestickFeed instance using this broker's connector.
+
+        Example (Historical Bulk):
+            >>> from datetime import date
+            >>> from longport.openapi import AdjustType
+            >>> feed = broker.candlestick_feed(
+            ...     instruments=[Instrument.stock('700', exchange='HK')],
+            ...     resolution=Resolution.DAILY,
+            ...     start_date=date(2024, 1, 1),
+            ...     end_date=date(2024, 12, 31),
+            ...     adjust_type=AdjustType.NoAdjust,
+            ... )
+
+        Example (Periodic Updates):
+            >>> from datetime import date, timedelta
+            >>> from longport.openapi import AdjustType
+            >>> feed = broker.candlestick_feed(
+            ...     instruments=[Instrument.stock('700', exchange='HK')],
+            ...     resolution=Resolution.MINUTE,
+            ...     start_date=date.today(),
+            ...     update_interval=timedelta(minutes=1),
+            ...     adjust_type=AdjustType.NoAdjust,
+            ... )
+        """
+        # Import here to avoid circular dependency
+        from simulor.data.feeds.longbridge import LongbridgeCandlestickFeed
+
+        # Create and return feed
+        return LongbridgeCandlestickFeed(
+            connector=self._connector,
+            instruments=instruments,
+            resolution=resolution,
+            start_date=start_date,
+            end_date=end_date,
+            adjust_type=adjust_type,
+            update_interval=update_interval,
+        )
