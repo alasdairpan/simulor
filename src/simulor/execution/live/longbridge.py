@@ -2,14 +2,14 @@
 
 This module provides the Longbridge broker implementation for order execution.
 The broker uses a shared connector to avoid duplicate connections when used
-together with LongbridgeFeed.
+together with LongbridgeLiveFeed.
 
 Architecture:
     LongbridgeConnector (shared, from connectors.py)
         ├── QuoteContext (market data)
         └── TradeContext (order execution)
                 ↓                    ↓
-          LongbridgeFeed       Longbridge (Broker)
+          LongbridgeLiveFeed       Longbridge (Broker)
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from longport.openapi import OrderType as LongportOrderType
     from longport.openapi import TimeInForceType as LongportTimeInForce
 
-    from simulor.data.feeds.longbridge import LongbridgeFeed
+    from simulor.data.feeds.longbridge import LongbridgeLiveFeed
 
 logger = get_logger(__name__)
 
@@ -173,18 +173,18 @@ class Longbridge(Broker):
         self,
         instruments: list[Instrument],
         data_types: list[DataType],
-    ) -> LongbridgeFeed:
-        """Create a LongbridgeFeed using the shared connector.
+    ) -> LongbridgeLiveFeed:
+        """Create a LongbridgeLiveFeed using the shared connector.
 
         Args:
             instruments: List of instruments to subscribe to
             data_types: List of DataType enum values to subscribe
 
         Returns:
-            LongbridgeFeed instance using this broker's connector.
+            LongbridgeLiveFeed instance using this broker's connector.
         """
         # Create feed
-        feed = LongbridgeFeed(connector=self._connector)
+        feed = LongbridgeLiveFeed(connector=self._connector)
 
         # Subscribe to instruments
         feed.subscribe(instruments, data_types)

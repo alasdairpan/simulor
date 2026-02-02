@@ -6,11 +6,11 @@ between backtesting (historical data) and live trading modes.
 
 Architecture:
     The feeds use shared connectors to avoid duplicate connections when
-    used together with brokers. For example, LongbridgeFeed and Longbridge broker
+    used together with brokers. For example, LongbridgeLiveFeed and Longbridge broker
     share the same LongbridgeConnector instance.
 
 Available Feeds:
-    - LongbridgeFeed: Longbridge real-time data feed
+    - LongbridgeLiveFeed: Longbridge real-time data feed
 
 Usage Example:
     >>> from simulor.data.feeds import DataType
@@ -32,9 +32,9 @@ Usage Example:
 """
 
 from simulor.data.feeds.live import DataType
-from simulor.data.feeds.longbridge import LongbridgeFeed
+from simulor.data.feeds.longbridge import LongbridgeLiveFeed
 
 __all__ = [
-    "LongbridgeFeed",
+    "LongbridgeLiveFeed",
     "DataType",
 ]

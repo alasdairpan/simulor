@@ -25,7 +25,7 @@ class LongbridgeConnector(Connector):
     """Shared connector for Longbridge broker.
 
     Manages both QuoteContext (for market data) and TradeContext (for trading).
-    This connector is designed to be shared between LongbridgeFeed and Longbridge broker
+    This connector is designed to be shared between LongbridgeLiveFeed and Longbridge broker
     to avoid creating duplicate connections to the same broker API.
 
     Usage:

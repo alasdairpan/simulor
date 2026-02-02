@@ -44,10 +44,10 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-__all__ = ["LongbridgeFeed"]
+__all__ = ["LongbridgeLiveFeed"]
 
 
-class LongbridgeFeed(Feed):
+class LongbridgeLiveFeed(Feed):
     """Longbridge broker real-time data feed.
 
     Connects to Longbridge API to receive real-time market data for
@@ -68,7 +68,7 @@ class LongbridgeFeed(Feed):
         >>> connector.connect()
         >>>
         >>> # Create feed and broker using same connector
-        >>> feed = LongbridgeFeed(connector=connector)
+        >>> feed = LongbridgeLiveFeed(connector=connector)
         >>> broker = Longbridge(connector=connector, order_update_callback=...)
         >>>
         >>> # Subscribe to instruments
@@ -142,7 +142,7 @@ class LongbridgeFeed(Feed):
             quote_ctx.set_on_trades(self._on_trades_callback)
             quote_ctx.set_on_brokers(self._on_brokers_callback)
 
-            logger.info("LongbridgeFeed connected via shared connector")
+            logger.info("LongbridgeLiveFeed connected via shared connector")
 
         except Exception as exc:
             raise RuntimeError(f"Failed to connect LongportFeed: {exc}") from exc
@@ -164,7 +164,7 @@ class LongbridgeFeed(Feed):
                 if all_data_types:
                     self.unsubscribe(instruments, list(all_data_types))
 
-            logger.info("LongbridgeFeed disconnected")
+            logger.info("LongbridgeLiveFeed disconnected")
 
         except Exception as e:
             logger.warning(f"Error during LongportFeed disconnect: {e}")
