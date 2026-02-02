@@ -418,7 +418,7 @@ class LongbridgeLiveFeed(Feed):
                     resolution=Resolution.TICK,
                     price=trade.price,
                     size=Decimal(trade.volume),
-                    direction=self._parse_trade_direction(trade.direction),
+                    direction=self._parse_trade_direction(trade.direction),  # type: ignore[arg-type]
                 )
                 # Group ticks by timestamp
                 tick_map.setdefault(trade.timestamp, []).append(tick)
@@ -450,9 +450,9 @@ class LongbridgeLiveFeed(Feed):
         Returns:
             TickDirection enum
         """
-        if trade_direction == TradeDirection.Up:
+        if trade_direction == TradeDirection.Up:  # type: ignore[comparison-overlap]
             return TickDirection.BUY
-        elif trade_direction == TradeDirection.Down:
+        elif trade_direction == TradeDirection.Down:  # type: ignore[comparison-overlap]
             return TickDirection.SELL
         else:
             return TickDirection.NEUTRAL
@@ -611,7 +611,7 @@ class LongbridgeCandlestickFeed(Feed):
         if self._resolution not in mapping:
             raise ValueError(f"Unsupported resolution: {self._resolution}")
 
-        return mapping[self._resolution]
+        return mapping[self._resolution]  # type: ignore[return-value]
 
     def _convert_to_trade_bar(self, candlestick: Candlestick, instrument: Instrument) -> TradeBar:
         """Convert Longbridge Candlestick to Simulor TradeBar.
@@ -728,7 +728,7 @@ class LongbridgeCandlestickFeed(Feed):
             try:
                 candlesticks = quote_ctx.history_candlesticks_by_date(
                     symbol=symbol,
-                    period=period,
+                    period=period,  # type: ignore[arg-type]
                     adjust_type=self._adjust_type,
                     start=start_date,
                     end=end_date,
@@ -761,7 +761,7 @@ class LongbridgeCandlestickFeed(Feed):
                 try:
                     candlesticks = quote_ctx.history_candlesticks_by_date(
                         symbol=symbol,
-                        period=period,
+                        period=period,  # type: ignore[arg-type]
                         adjust_type=self._adjust_type,
                         start=current_start,
                         end=chunk_end,
@@ -957,7 +957,7 @@ class LongbridgeCandlestickFeed(Feed):
                 # count=100 should be sufficient for most periodic update intervals
                 candlesticks = quote_ctx.history_candlesticks_by_offset(
                     symbol=symbol,
-                    period=period,
+                    period=period,  # type: ignore[arg-type]
                     adjust_type=self._adjust_type,
                     forward=True,  # Get bars after the specified time
                     count=100,  # Fetch up to 100 new bars

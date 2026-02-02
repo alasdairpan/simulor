@@ -119,7 +119,7 @@ class Longbridge(Broker):
             # SimulorOrderType.TRAILING_STOP_LIMIT: LongportOrderType.Unknown,
         }
         try:
-            return mapping[order_type]
+            return mapping[order_type]  # type: ignore[return-value]
         except KeyError as e:
             raise ValueError(f"Unsupported order type for Longport: {order_type}") from e
 
@@ -136,7 +136,7 @@ class Longbridge(Broker):
             SimulorOrderSide.SELL: LongportOrderSide.Sell,
         }
         try:
-            return mapping[order_side]
+            return mapping[order_side]  # type: ignore[return-value]
         except KeyError as e:
             raise ValueError(f"Unsupported order side for Longport: {order_side}") from e
 
@@ -157,7 +157,7 @@ class Longbridge(Broker):
             # SimulorTimeInForce.FOK: LongportTimeInForce.Unknown,
         }
         try:
-            return mapping[time_in_force]
+            return mapping[time_in_force]  # type: ignore[return-value]
         except KeyError as e:
             raise ValueError(f"Unsupported time in force for Longport: {time_in_force}") from e
 
@@ -165,10 +165,10 @@ class Longbridge(Broker):
         """Submit an `OrderSpec` to Longport and return the resulting order id."""
         resp = self._connector.trade_context.submit_order(
             symbol=f"{order_spec.instrument.symbol}.{order_spec.instrument.exchange}",
-            order_type=self._to_longport_order_type(order_spec.order_type),
-            side=self._to_longport_order_side(order_spec.side),
+            order_type=self._to_longport_order_type(order_spec.order_type),  # type: ignore[arg-type]
+            side=self._to_longport_order_side(order_spec.side),  # type: ignore[arg-type]
             submitted_quantity=order_spec.quantity,
-            time_in_force=self._to_longport_time_in_force(order_spec.time_in_force),
+            time_in_force=self._to_longport_time_in_force(order_spec.time_in_force),  # type: ignore[arg-type]
             submitted_price=order_spec.limit_price,
             trigger_price=order_spec.stop_price,
         )
