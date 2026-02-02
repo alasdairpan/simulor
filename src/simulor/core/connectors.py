@@ -3,14 +3,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from simulor.core.events import EventBus
 from simulor.logging import get_logger
+from simulor.portfolio.manager import Portfolio
 from simulor.types.orders import OrderSpec
-
-if TYPE_CHECKING:
-    from simulor.portfolio.manager import Portfolio
 
 logger = get_logger(__name__)
 
