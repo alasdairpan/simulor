@@ -11,7 +11,7 @@ from decimal import Decimal
 
 from simulor.core.protocols import ExecutionModel
 from simulor.logging import get_logger
-from simulor.types import Instrument, OrderSide, OrderSpec, OrderType
+from simulor.types import Instrument, OrderSide, OrderSpec, OrderType, TimeInForce
 
 # Create module logger
 logger = get_logger(__name__)
@@ -145,6 +145,7 @@ class Immediate(ExecutionModel):
                 side=side,
                 quantity=quantity,
                 order_type=OrderType.MARKET,
+                time_in_force=TimeInForce.DAY,
                 reason=f"Rebalance to target: {target_qty}",
             )
             orders.append(order)

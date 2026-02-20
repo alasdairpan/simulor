@@ -43,8 +43,7 @@ try:
     from longport.openapi import AdjustType
 except ImportError as e:
     raise ImportError(
-        "Longbridge data feeds require the 'longport' package. "
-        "Install it with: pip install 'simulor[longport]'"
+        "Longbridge data feeds require the 'longport' package. Install it with: pip install 'simulor[longport]'"
     ) from e
 
 if TYPE_CHECKING:
@@ -743,7 +742,7 @@ class LongbridgeCandlestickFeed(Feed):
                 candlesticks = quote_ctx.history_candlesticks_by_date(
                     symbol=symbol,
                     period=period,  # type: ignore[arg-type]
-                    adjust_type=self._adjust_type, # type: ignore[arg-type]
+                    adjust_type=self._adjust_type,  # type: ignore[arg-type]
                     start=start_date,
                     end=end_date,
                 )
@@ -776,7 +775,7 @@ class LongbridgeCandlestickFeed(Feed):
                     candlesticks = quote_ctx.history_candlesticks_by_date(
                         symbol=symbol,
                         period=period,  # type: ignore[arg-type]
-                        adjust_type=self._adjust_type, # type: ignore[arg-type]
+                        adjust_type=self._adjust_type,  # type: ignore[arg-type]
                         start=current_start,
                         end=chunk_end,
                     )

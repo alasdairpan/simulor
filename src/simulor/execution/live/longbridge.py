@@ -34,8 +34,7 @@ try:
     from longport.openapi import TimeInForceType as LongportTimeInForce
 except ImportError as e:
     raise ImportError(
-        "Longbridge integration requires the 'longport' package. "
-        "Install it with: pip install 'simulor[longport]'"
+        "Longbridge integration requires the 'longport' package. Install it with: pip install 'simulor[longport]'"
     ) from e
 
 if TYPE_CHECKING:

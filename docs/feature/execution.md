@@ -880,7 +880,8 @@ order_spec = OrderSpec(
     symbol='AAPL',
     side='buy',
     size=100,
-    type=OrderType.MARKET
+    type=OrderType.MARKET,
+    time_in_force=TimeInForce.DAY  # Market orders should use DAY or IOC
 )
 
 # Limit orders
@@ -890,7 +891,7 @@ order_spec = OrderSpec(
     size=100,
     type=OrderType.LIMIT,
     price=150.00,
-    time_in_force=TimeInForce.GTC
+    time_in_force=TimeInForce.GTC  # Limit orders can use GTC
 )
 ```
 
@@ -914,8 +915,8 @@ bracket = exec.bracket_order(
 
 ```python
 oco = exec.oco_order([
-    OrderSpec(symbol='AAPL', side='buy', size=100, type='limit', price=149.00),
-    OrderSpec(symbol='AAPL', side='buy', size=100, type='stop', stop=152.00)
+    OrderSpec(symbol='AAPL', side='buy', size=100, type='limit', price=149.00, time_in_force=TimeInForce.GTC),
+    OrderSpec(symbol='AAPL', side='buy', size=100, type='stop', stop=152.00, time_in_force=TimeInForce.DAY)
 ])
 # Breakout entry: buy if breaks above 152 OR buy if dips to 149
 ```
