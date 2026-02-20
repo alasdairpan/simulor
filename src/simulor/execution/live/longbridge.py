@@ -17,9 +17,14 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import TYPE_CHECKING
 
+from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.data.feeds import DataType
-from simulor.execution.live.connectors import LongbridgeConnector
+from simulor.execution.live.connectors import (
+    LongbridgeConnector,
+    instrument_to_longbridge_symbol,
+    longbridge_symbol_to_instrument,
+)
 from simulor.logging import get_logger
 from simulor.types import Instrument, OrderSpec, Resolution
 from simulor.types import OrderSide as SimulorOrderSide
@@ -170,7 +175,7 @@ class Longbridge(Broker):
     def submit_order(self, strategy_name: str, order_spec: OrderSpec) -> SubmitOrderResult:  # noqa: ARG002
         """Submit an `OrderSpec` to Longport and return the resulting order id."""
         resp = self._connector.trade_context.submit_order(
-            symbol=f"{order_spec.instrument.symbol}.{order_spec.instrument.exchange}",
+            symbol=instrument_to_longbridge_symbol(order_spec.instrument),
             order_type=self._to_longport_order_type(order_spec.order_type),  # type: ignore[arg-type]
             side=self._to_longport_order_side(order_spec.side),  # type: ignore[arg-type]
             submitted_quantity=order_spec.quantity,
@@ -184,6 +189,90 @@ class Longbridge(Broker):
     def cancel_order(self, strategy_name: str, order_id: str) -> None:  # noqa: ARG002
         """Cancel an existing order by its Longport `order_id`."""
         self._connector.trade_context.cancel_order(order_id=order_id)
+
+    def get_account_balance(self) -> AccountBalance:
+        """Fetch account balance from the Longbridge API.
+
+        Calls /v1/asset/account and maps the first returned AccountBalance
+        entry to Simulor's AccountBalance model.
+
+        Returns:
+            AccountBalance snapshot for the primary account.
+
+        Raises:
+            RuntimeError: If the broker is not connected or the API call fails.
+        """
+        resp = self._connector.trade_context.account_balance()
+        if not resp:
+            raise RuntimeError("No account balance returned from Longbridge API.")
+        lb = resp[0]  # Primary account
+
+        cash_infos = tuple(
+            CashInfo(
+                currency=cash_info.currency,
+                available_cash=cash_info.available_cash,
+                frozen_cash=cash_info.frozen_cash,
+                settling_cash=cash_info.settling_cash,
+                withdrawable_cash=cash_info.withdraw_cash,
+            )
+            for cash_info in (lb.cash_infos or [])
+        )
+
+        return AccountBalance(
+            currency=lb.currency,
+            net_assets=lb.net_assets,
+            total_cash=lb.total_cash,
+            buying_power=lb.buy_power,
+            init_margin=lb.init_margin,
+            maintenance_margin=lb.maintenance_margin,
+            margin_call=lb.margin_call,
+            risk_level=RiskLevel(lb.risk_level),
+            cash_infos=cash_infos,
+        )
+
+    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
+        """Fetch stock positions from the Longbridge API.
+
+        Calls /v1/asset/stock. When ``instruments`` is provided, only those
+        symbols are queried.
+
+        Args:
+            instruments: Optional filter; when provided, only positions for
+                the specified instruments are returned.
+
+        Returns:
+            List of StockPosition snapshots.
+            ``current_price`` is always ``None`` — the stock positions endpoint
+            does not include live pricing; use a quote feed for market prices.
+
+        Raises:
+            RuntimeError: If the broker is not connected or the API call fails.
+        """
+        symbols: list[str] | None = None
+        if instruments is not None:
+            symbols = [instrument_to_longbridge_symbol(i) for i in instruments]
+
+        resp = self._connector.trade_context.stock_positions(symbols=symbols)
+        if not resp.channels:
+            return []
+
+        positions = []
+        for channel in resp.channels:
+            for item in channel.positions:
+                instrument = longbridge_symbol_to_instrument(item.symbol, currency=item.currency)
+                positions.append(
+                    StockPosition(
+                        instrument=instrument,
+                        currency=item.currency,
+                        quantity=item.quantity,
+                        # available_quantity can be negative in Longbridge when
+                        # shares are sold but settlement has not yet completed.
+                        available_quantity=item.available_quantity,
+                        cost_price=item.cost_price,
+                        current_price=None,  # Not provided by this endpoint
+                    )
+                )
+        return positions
 
     def live_feed(
         self,

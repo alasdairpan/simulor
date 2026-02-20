@@ -6,6 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
+from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.core.events import EventType, MarketEvent, SystemEvent
 from simulor.execution.simulation.cost_models import CostModel
@@ -15,6 +16,13 @@ from simulor.logging import get_logger
 from simulor.types import Fill, Instrument, OrderSide, OrderSpec
 
 logger = get_logger(__name__)
+
+
+@dataclass
+class _AggregatedPosition:
+    quantity: Decimal = field(default_factory=lambda: Decimal("0"))
+    cost_numerator: Decimal = field(default_factory=lambda: Decimal("0"))
+    current_price: Decimal | None = None
 
 
 @dataclass(order=True)
@@ -43,11 +51,13 @@ class SimulatedBroker(Broker):
         fill_model: FillModel | None = None,
         cost_model: CostModel | None = None,
         latency_model: LatencyModel | None = None,
+        base_currency: str = "USD",
     ) -> None:
         super().__init__()
         self._fill_model = fill_model or InstantFillModel()
         self._cost_model = cost_model or CostModel()
         self._latency_model = latency_model or ConstantLatencyModel(latency=0)
+        self._base_currency = base_currency
 
         # State: Network Simulation
         # Priority Queue for orders "in flight"
@@ -285,37 +295,78 @@ class SimulatedBroker(Broker):
             strategy_name,
         )
 
-    # TODO: Make it ana abstract method for Broker
-    def get_cash_balance(self) -> Decimal:
-        """Get the total cash balance across all strategies and unallocated cash.
+    def get_account_balance(self) -> AccountBalance:
+        """Get a snapshot of the simulated account's financial state.
+
+        Margin fields are not modelled in simulation and are always zero.
+        A single CashInfo entry is returned for the base currency.
+        """
+        total_cash = self.global_portfolio.cash
+        for strategy_portfolio in self.strategy_portfolios.values():
+            total_cash += strategy_portfolio.cash
+
+        net_assets = self.global_portfolio.cash
+        for strategy_portfolio in self.strategy_portfolios.values():
+            net_assets += strategy_portfolio.total_value
+
+        cash_info = CashInfo(
+            currency=self._base_currency,
+            available_cash=total_cash,
+            frozen_cash=Decimal("0"),
+            settling_cash=Decimal("0"),
+            withdrawable_cash=total_cash,
+        )
+        return AccountBalance(
+            currency=self._base_currency,
+            net_assets=net_assets,
+            total_cash=total_cash,
+            buying_power=total_cash,
+            init_margin=Decimal("0"),
+            maintenance_margin=Decimal("0"),
+            margin_call=Decimal("0"),
+            risk_level=RiskLevel.SAFE,
+            cash_infos=(cash_info,),
+        )
+
+    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
+        """Get current simulated stock holdings, aggregated across all strategies.
+
+        Args:
+            instruments: Optional filter; when provided only the specified
+                instruments are included in the result.
 
         Returns:
-            Total cash balance = unallocated cash + sum of all strategy portfolio cash
+            List of StockPosition snapshots sorted by instrument symbol.
         """
-        # Start with unallocated cash in global portfolio
-        total = self.global_portfolio.cash
-
-        # Add cash from all strategy portfolios
+        aggregated: dict[Instrument, _AggregatedPosition] = {}
         for strategy_portfolio in self.strategy_portfolios.values():
-            total += strategy_portfolio.cash
+            for instrument, position in strategy_portfolio.positions.items():
+                if instruments is not None and instrument not in instruments:
+                    continue
+                if instrument not in aggregated:
+                    aggregated[instrument] = _AggregatedPosition()
+                entry = aggregated[instrument]
+                entry.cost_numerator += position.quantity * position.average_cost
+                entry.quantity += position.quantity
+                if position.current_price is not None:
+                    entry.current_price = position.current_price
 
-        return total
-
-    # TODO: Make it an abstract method for Broker
-    def get_equity(self) -> Decimal:
-        """Get the total equity (net liquidation value) across all strategies.
-
-        Returns:
-            Total equity = unallocated cash + sum of all strategy portfolio values
-        """
-        # Start with unallocated cash in global portfolio
-        total = self.global_portfolio.cash
-
-        # Add cash and position values from all strategy portfolios
-        for strategy_portfolio in self.strategy_portfolios.values():
-            total += strategy_portfolio.total_value
-
-        return total
+        result = []
+        for instrument, entry in aggregated.items():
+            qty = entry.quantity
+            cost_price = entry.cost_numerator / qty if qty != 0 else Decimal("0")
+            result.append(
+                StockPosition(
+                    instrument=instrument,
+                    currency=instrument.currency,
+                    quantity=qty,
+                    available_quantity=qty,  # No T+N settlement delay in simulation
+                    cost_price=cost_price,
+                    current_price=entry.current_price,
+                )
+            )
+        result.sort(key=lambda p: p.instrument.symbol)
+        return result
 
     def sync_global_portfolio(self, timestamp: datetime) -> None:
         """Synchronize global portfolio with strategy portfolios.
@@ -377,9 +428,10 @@ class SimulatedBroker(Broker):
             del self._global_portfolio._positions[inst]
 
         # Record snapshot after sync
+        balance = self.get_account_balance()
         self._global_portfolio.recorder.record_snapshot(
             timestamp=timestamp,
-            equity=self.get_equity(),
-            cash=self.get_cash_balance(),
+            equity=balance.net_assets,
+            cash=balance.total_cash,
             positions=dict(self._global_portfolio._positions),
         )

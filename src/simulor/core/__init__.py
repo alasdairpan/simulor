@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
 from simulor.core.connectors import Broker, Connector, SubmitOrderResult
 from simulor.core.events import (
     DataEvent,
@@ -25,6 +26,10 @@ from simulor.core.protocols import (
 )
 
 __all__ = [
+    "AccountBalance",
+    "CashInfo",
+    "RiskLevel",
+    "StockPosition",
     "Broker",
     "Connector",
     "SubmitOrderResult",

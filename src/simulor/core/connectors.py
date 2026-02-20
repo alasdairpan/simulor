@@ -3,11 +3,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
+from simulor.core.assets import AccountBalance, StockPosition
 from simulor.core.events import EventBus
 from simulor.logging import get_logger
 from simulor.portfolio.manager import Portfolio
 from simulor.types.orders import OrderSpec
+
+if TYPE_CHECKING:
+    from simulor.types import Instrument
 
 logger = get_logger(__name__)
 
@@ -131,5 +136,28 @@ class Broker(Connector):
         Args:
             strategy_name: Name of the strategy requesting the cancellation
             order_id: The unique identifier of the order to cancel
+        """
+        ...
+
+    @abstractmethod
+    def get_account_balance(self) -> AccountBalance:
+        """Get a snapshot of the account's overall financial state.
+
+        Returns:
+            AccountBalance containing net assets, total cash, buying power,
+            margin usage, risk level, and per-currency cash breakdown.
+        """
+        ...
+
+    @abstractmethod
+    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
+        """Get current stock holdings.
+
+        Args:
+            instruments: Optional filter; when provided, only positions for
+                the specified instruments are returned.
+
+        Returns:
+            List of StockPosition snapshots, one per held instrument.
         """
         ...

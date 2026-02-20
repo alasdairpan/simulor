@@ -35,10 +35,10 @@ from zoneinfo import ZoneInfo
 from simulor.core.events import EndOfStreamEvent, MarketEvent
 from simulor.core.protocols import Feed
 from simulor.data.feeds.live import DataType
+from simulor.execution.live.connectors import instrument_to_longbridge_symbol, longbridge_symbol_to_instrument
 from simulor.logging import get_logger
-from simulor.types import AssetType, Instrument, MarketData, QuoteTick, Resolution, TickDirection, TradeBar, TradeTick
+from simulor.types import Instrument, MarketData, QuoteTick, Resolution, TickDirection, TradeBar, TradeTick
 
-# Import longport types - required for this module
 try:
     from longport.openapi import AdjustType
 except ImportError as e:
@@ -203,7 +203,7 @@ class LongbridgeLiveFeed(Feed):
         data_types_set = set(data_types)
 
         for instrument in instruments:
-            symbol = self._to_longport_symbol(instrument)
+            symbol = instrument_to_longbridge_symbol(instrument)
 
             # Track subscriptions
             if instrument not in self._subscriptions:
@@ -237,7 +237,7 @@ class LongbridgeLiveFeed(Feed):
             return
 
         for instrument in instruments:
-            symbol = self._to_longport_symbol(instrument)
+            symbol = instrument_to_longbridge_symbol(instrument)
 
             # Update tracked subscriptions
             if instrument in self._subscriptions:
@@ -250,60 +250,6 @@ class LongbridgeLiveFeed(Feed):
                 logger.info(f"Unsubscribed {symbol} from {len(sub_types)} data types")
             except Exception as e:
                 logger.warning(f"Error unsubscribing {symbol}: {e}")
-
-    def _to_longport_symbol(self, instrument: Instrument) -> str:
-        """Convert Simulor instrument to Longbridge symbol format.
-
-        Format examples: 700.HK, AAPL.US, 600519.SH
-
-        Args:
-            instrument: Simulor instrument
-
-        Returns:
-            Longbridge-formatted security code
-        """
-        exchange_map = {
-            "HKEX": "HK",
-            "HK": "HK",
-            "NYSE": "US",
-            "NASDAQ": "US",
-            "US": "US",
-            "SSE": "SH",  # Shanghai Stock Exchange
-            "SH": "SH",
-            "SZSE": "SZ",  # Shenzhen Stock Exchange
-            "SZ": "SZ",
-            "SGX": "SG",  # Singapore Exchange
-            "SG": "SG",
-        }
-
-        exchange = instrument.exchange or "US"
-        region = exchange_map.get(exchange, exchange)
-        return f"{instrument.symbol}.{region}"
-
-    def _from_longport_symbol(self, symbol: str) -> Instrument:
-        """Convert Longbridge symbol to Simulor instrument.
-
-        Args:
-            symbol: Longbridge security code (e.g., '700.HK')
-
-        Returns:
-            Simulor Instrument object
-        """
-        ticker, region = symbol.split(".")
-
-        exchange_map = {
-            "HK": "HKEX",
-            "US": "NASDAQ",  # Default to NASDAQ for US stocks
-            "SH": "SSE",
-            "SZ": "SZSE",
-            "SG": "SGX",
-        }
-
-        return Instrument(
-            symbol=ticker,
-            exchange=exchange_map.get(region, region),
-            asset_type=AssetType.STOCK,
-        )
 
     def publish_market_data(self, data: Sequence[MarketData], timestamp: datetime) -> None:
         """Publish market data as a MarketEvent.
@@ -387,7 +333,7 @@ class LongbridgeLiveFeed(Feed):
             logger.debug(f"Received PushDepth for {symbol}: {depth}")
 
         try:
-            instrument = self._from_longport_symbol(symbol)
+            instrument = longbridge_symbol_to_instrument(symbol)
 
             # Extract best bid/ask from depth
             if depth.asks and depth.bids:
@@ -421,7 +367,7 @@ class LongbridgeLiveFeed(Feed):
             logger.debug(f"Received PushTrades for {symbol}: {trades}")
 
         try:
-            instrument = self._from_longport_symbol(symbol)
+            instrument = longbridge_symbol_to_instrument(symbol)
             tick_map: dict[datetime, list[TradeTick]] = {}
 
             for trade in trades.trades:
@@ -651,35 +597,6 @@ class LongbridgeCandlestickFeed(Feed):
             volume=Decimal(str(candlestick.volume)),
         )
 
-    def _to_longport_symbol(self, instrument: Instrument) -> str:
-        """Convert Simulor instrument to Longbridge symbol format.
-
-        Format examples: 700.HK, AAPL.US, 600519.SH
-
-        Args:
-            instrument: Simulor instrument
-
-        Returns:
-            Longbridge-formatted security code
-        """
-        exchange_map = {
-            "HKEX": "HK",
-            "HK": "HK",
-            "NYSE": "US",
-            "NASDAQ": "US",
-            "US": "US",
-            "SSE": "SH",
-            "SH": "SH",
-            "SZSE": "SZ",
-            "SZ": "SZ",
-            "SGX": "SG",
-            "SG": "SG",
-        }
-
-        exchange = instrument.exchange or "US"
-        region = exchange_map.get(exchange, exchange)
-        return f"{instrument.symbol}.{region}"
-
     def _respect_rate_limit(self) -> None:
         """Ensure we don't exceed 60 requests per 30 seconds.
 
@@ -719,7 +636,7 @@ class LongbridgeCandlestickFeed(Feed):
         Returns:
             List of TradeBar objects in chronological order
         """
-        symbol = self._to_longport_symbol(instrument)
+        symbol = instrument_to_longbridge_symbol(instrument)
         period = self._resolution_to_period()
         quote_ctx = self.connector.quote_context
         all_bars: list[TradeBar] = []
@@ -961,7 +878,7 @@ class LongbridgeCandlestickFeed(Feed):
 
         # Fetch new bars for each instrument using offset method
         for instrument in self._instruments:
-            symbol = self._to_longport_symbol(instrument)
+            symbol = instrument_to_longbridge_symbol(instrument)
 
             try:
                 self._respect_rate_limit()
