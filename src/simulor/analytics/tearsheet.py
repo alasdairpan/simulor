@@ -21,6 +21,8 @@ import plotly
 if TYPE_CHECKING:
     from simulor.analytics.result import BacktestResult
 
+__all__ = ["Tearsheet"]
+
 
 class Tearsheet:
     """Generate a self-contained HTML tearsheet for backtest results.

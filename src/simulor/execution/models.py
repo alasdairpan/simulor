@@ -16,6 +16,8 @@ from simulor.types import Instrument, OrderSide, OrderSpec, OrderType, TimeInFor
 # Create module logger
 logger = get_logger(__name__)
 
+__all__ = ["Immediate"]
+
 
 class Immediate(ExecutionModel):
     """Immediate execution via market orders with rebalancing controls.

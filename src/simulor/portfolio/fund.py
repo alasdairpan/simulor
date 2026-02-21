@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from simulor.core.protocols import AllocationModel
     from simulor.strategy.strategy import Strategy
 
+__all__ = ["Fund"]
+
 
 class Fund:
     """Global fund that manages multiple strategies with capital allocation.

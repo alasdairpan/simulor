@@ -23,6 +23,8 @@ from simulor.core.protocols import (
     UniverseSelectionModel,
 )
 
+__all__ = ["Strategy"]
+
 
 @dataclass
 class Strategy:

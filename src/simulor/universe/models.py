@@ -18,6 +18,8 @@ from simulor.types import Instrument
 # Create module logger
 logger = get_logger(__name__)
 
+__all__ = ["Static"]
+
 
 class Static(UniverseSelectionModel):
     """Static universe: Fixed list of instruments.

@@ -7,6 +7,8 @@ from decimal import Decimal
 
 from simulor.core.protocols import AllocationModel
 
+__all__ = ["WeightBasedAllocationModel"]
+
 
 class WeightBasedAllocationModel(AllocationModel):
     """Fixed-weight capital allocation.

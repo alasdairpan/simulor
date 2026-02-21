@@ -19,6 +19,8 @@ from simulor.types import Instrument, Resolution
 # Create module logger
 logger = get_logger(__name__)
 
+__all__ = ["MovingAverageCrossover"]
+
 
 class MovingAverageCrossover(AlphaModel):
     """Moving average crossover alpha model.

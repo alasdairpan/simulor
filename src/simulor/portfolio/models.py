@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 # Create module logger
 logger = get_logger(__name__)
 
+__all__ = ["PositionType", "EqualWeight"]
+
 
 class PositionType(Enum):
     """Type of positions allowed in portfolio construction."""

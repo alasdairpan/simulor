@@ -16,6 +16,8 @@ from typing import Any
 
 from simulor.types import Instrument
 
+__all__ = ["SignalType", "Signal"]
+
 
 class SignalType(Enum):
     """Type of signal source."""

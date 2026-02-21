@@ -17,6 +17,8 @@ from simulor.types import Fill, Instrument, OrderSide, OrderSpec
 
 logger = get_logger(__name__)
 
+__all__ = ["SimulatedBroker"]
+
 
 @dataclass
 class _AggregatedPosition:

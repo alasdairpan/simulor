@@ -10,6 +10,8 @@ from simulor.types import Resolution
 
 logger = get_logger(__name__)
 
+__all__ = ["CsvFeed"]
+
 
 class CsvFeed(Feed):
     """Feed that publishes market events from CSV files.
