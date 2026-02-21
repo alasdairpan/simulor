@@ -35,7 +35,7 @@ from zoneinfo import ZoneInfo
 from simulor.core.events import EndOfStreamEvent, MarketEvent
 from simulor.core.protocols import Feed
 from simulor.data.feeds.live import DataType
-from simulor.execution.live.connectors import instrument_to_longbridge_symbol, longbridge_symbol_to_instrument
+from simulor.execution.live.symbols import instrument_to_longbridge_symbol, longbridge_symbol_to_instrument
 from simulor.logging import get_logger
 from simulor.types import Instrument, MarketData, QuoteTick, Resolution, TickDirection, TradeBar, TradeTick
 

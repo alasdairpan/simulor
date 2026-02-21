@@ -20,11 +20,8 @@ from typing import TYPE_CHECKING
 from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.data.feeds import DataType
-from simulor.execution.live.connectors import (
-    LongbridgeConnector,
-    instrument_to_longbridge_symbol,
-    longbridge_symbol_to_instrument,
-)
+from simulor.execution.live.connectors import LongbridgeConnector
+from simulor.execution.live.symbols import instrument_to_longbridge_symbol, longbridge_symbol_to_instrument
 from simulor.logging import get_logger
 from simulor.types import Instrument, OrderSpec, Resolution
 from simulor.types import OrderSide as SimulorOrderSide
