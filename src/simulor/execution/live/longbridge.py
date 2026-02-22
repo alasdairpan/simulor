@@ -15,6 +15,7 @@ Architecture:
 from __future__ import annotations
 
 from datetime import date, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
@@ -84,16 +85,80 @@ class Longbridge(Broker):
         self._connector = LongbridgeConnector(config)
 
     def connect(self) -> None:
-        """Explicitly initialize the connector.
+        """Explicitly initialize the connector and seed portfolio from broker.
 
-        This allows users to establish the connection upfront and validate
-        credentials before proceeding. Connection also happens automatically
-        when methods are called if this is not invoked.
+        After establishing the connection, queries the broker for the current
+        account balance and open stock positions and seeds them into the global
+        portfolio.  This ensures the local cache reflects real broker state at
+        startup rather than starting from zero.
+
+        Strategy-level portfolios retain their allocated starting cash; positions
+        cannot be mapped back to individual strategies without external bookkeeping.
 
         Raises:
             RuntimeError: if the longport package is not installed or connection fails.
         """
         self._connector.connect()
+        self._sync_portfolio_from_broker()
+
+    def _sync_portfolio_from_broker(self) -> None:
+        """Seed the global portfolio from the broker's current account state.
+
+        Fetches account balance and stock positions from the broker API and
+        populates the local global portfolio.  Emits a warning if the broker
+        cash differs from the locally tracked cash so the operator can reconcile.
+
+        No-op if the broker has not yet been initialised with a portfolio
+        (i.e. ``initialize()`` has not been called).
+        """
+        if not hasattr(self, "_global_portfolio"):
+            logger.debug("Broker not yet initialised with a portfolio; skipping sync.")
+            return
+
+        # --- Cash reconciliation (informational) ---
+        try:
+            balance = self.get_account_balance()
+            broker_cash = balance.total_cash
+            local_cash = self._global_portfolio.cash
+            logger.info(
+                "Broker account balance: total_cash=%s %s, net_assets=%s %s",
+                broker_cash,
+                balance.currency,
+                balance.net_assets,
+                balance.currency,
+            )
+            if broker_cash != local_cash:
+                logger.warning(
+                    "Cash divergence detected at startup: broker=%s, local=%s. "
+                    "Local portfolio reflects allocated capital; broker figure includes "
+                    "positions not managed by this engine.",
+                    broker_cash,
+                    local_cash,
+                )
+        except Exception:
+            logger.warning("Failed to fetch account balance from broker.", exc_info=True)
+
+        # --- Position seeding ---
+        try:
+            stock_positions = self.get_stock_positions()
+            seeded = 0
+            for sp in stock_positions:
+                if sp.quantity == 0:
+                    continue
+                self._global_portfolio.seed_position(
+                    instrument=sp.instrument,
+                    quantity=sp.quantity,
+                    average_cost=sp.cost_price if sp.cost_price is not None else Decimal("0"),
+                )
+                seeded += 1
+            if seeded:
+                logger.info(
+                    "Seeded %d position(s) into global portfolio from broker.", seeded
+                )
+            else:
+                logger.info("No open positions found on broker at startup.")
+        except Exception:
+            logger.warning("Failed to fetch stock positions from broker.", exc_info=True)
 
     def disconnect(self) -> None:
         """No-op, cleanup happens automatically via garbage collection."""
