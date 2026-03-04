@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from decimal import Decimal
 
-from simulor.core.protocols import AllocationModel
+from simulor.core.models import AllocationModel
 
 __all__ = ["WeightBasedAllocationModel"]
 

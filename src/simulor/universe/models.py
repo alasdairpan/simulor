@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 
-from simulor.core.protocols import UniverseSelectionModel
+from simulor.core.models import UniverseSelectionModel
 from simulor.logging import get_logger
 from simulor.types import Instrument
 

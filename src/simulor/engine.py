@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 from simulor.analytics import BacktestResult
 from simulor.core.connectors import Broker
 from simulor.core.events import DataEvent, EndOfStreamEvent, EventBus, MarketEvent, SystemEvent
-from simulor.core.protocols import Context, Feed
+from simulor.core.models import Context, Feed
 from simulor.data import MarketStore
 from simulor.execution.simulation.broker import SimulatedBroker
 from simulor.logging import get_logger

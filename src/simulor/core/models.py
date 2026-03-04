@@ -1,6 +1,6 @@
-"""Strategy component protocol definitions.
+"""Strategy component model definitions.
 
-Defines protocols for all strategy components in the framework:
+Defines abstract base classes for all strategy components in the framework:
 - UniverseSelectionModel: Determine which instruments to trade
 - AlphaModel: Generate trading signals from market data
 - PortfolioConstructionModel: Calculate target positions from signals
@@ -25,7 +25,17 @@ if TYPE_CHECKING:
     from simulor.portfolio.manager import Portfolio
     from simulor.types import Instrument, OrderSpec
 
-__all__ = ["Context", "Model", "Feed", "UniverseSelectionModel", "AlphaModel", "PortfolioConstructionModel", "RiskModel", "ExecutionModel", "AllocationModel"]
+__all__ = [
+    "Context",
+    "Model",
+    "Feed",
+    "UniverseSelectionModel",
+    "AlphaModel",
+    "PortfolioConstructionModel",
+    "RiskModel",
+    "ExecutionModel",
+    "AllocationModel",
+]
 
 
 class Context:
@@ -162,7 +172,7 @@ class Feed(ABC):
 
 
 class UniverseSelectionModel(Model, ABC):
-    """Protocol for universe selection.
+    """Abstract base class for universe selection.
 
     Universe selection models determine which instruments the strategy
     should consider trading at any point in time.
@@ -184,7 +194,7 @@ class UniverseSelectionModel(Model, ABC):
 
 
 class AlphaModel(Model, ABC):
-    """Protocol for alpha signal generation.
+    """Abstract base class for alpha signal generation.
 
     Alpha models analyze market data and generate trading signals
     indicating direction (buy/sell) and strength.
@@ -209,7 +219,7 @@ class AlphaModel(Model, ABC):
 
 
 class PortfolioConstructionModel(Model, ABC):
-    """Protocol for portfolio construction.
+    """Abstract base class for portfolio construction.
 
     Portfolio construction models convert trading signals into target
     positions, handling position sizing and portfolio weight allocation.
@@ -237,7 +247,7 @@ class PortfolioConstructionModel(Model, ABC):
 
 
 class RiskModel(Model, ABC):
-    """Protocol for risk management.
+    """Abstract base class for risk management.
 
     Risk models apply constraints and limits to position targets,
     ensuring the strategy stays within defined risk parameters.
@@ -265,7 +275,7 @@ class RiskModel(Model, ABC):
 
 
 class ExecutionModel(Model, ABC):
-    """Protocol for order execution.
+    """Abstract base class for order execution.
 
     Execution models convert position targets into executable orders,
     handling order types, timing, and other execution details.
@@ -292,7 +302,7 @@ class ExecutionModel(Model, ABC):
 
 
 class AllocationModel(Model, ABC):
-    """Protocol for portfolio-level capital allocation across strategies.
+    """Abstract base class for portfolio-level capital allocation across strategies.
 
     Allocation models determine how total portfolio capital is distributed
     among multiple strategies. Examples include equal weight, risk parity,

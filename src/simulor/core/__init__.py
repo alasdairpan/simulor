@@ -13,7 +13,7 @@ from simulor.core.events import (
     EventType,
     SystemEvent,
 )
-from simulor.core.protocols import (
+from simulor.core.models import (
     AllocationModel,
     AlphaModel,
     Context,

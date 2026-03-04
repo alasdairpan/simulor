@@ -3,7 +3,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from simulor.core.events import EndOfStreamEvent
-from simulor.core.protocols import Feed
+from simulor.core.models import Feed
 from simulor.data.providers.csv import CSVDataProvider
 from simulor.logging import get_logger
 from simulor.types import Resolution

@@ -55,7 +55,7 @@ from simulor.analytics import BacktestResult, StrategyMetrics, Tearsheet
 from simulor.core.events import MarketEvent
 
 # Protocols (for custom implementations)
-from simulor.core.protocols import (
+from simulor.core.models import (
     AlphaModel,
     ExecutionModel,
     PortfolioConstructionModel,

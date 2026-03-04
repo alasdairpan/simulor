@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from simulor.core.events import EndOfStreamEvent, MarketEvent
-from simulor.core.protocols import Feed
+from simulor.core.models import Feed
 from simulor.data.feeds.live import DataType
 from simulor.execution.live.symbols import instrument_to_longbridge_symbol, longbridge_symbol_to_instrument
 from simulor.logging import get_logger

@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from simulor.core.protocols import AllocationModel
+    from simulor.core.models import AllocationModel
     from simulor.strategy.strategy import Strategy
 
 __all__ = ["Fund"]

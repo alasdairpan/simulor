@@ -152,9 +152,7 @@ class Longbridge(Broker):
                 )
                 seeded += 1
             if seeded:
-                logger.info(
-                    "Seeded %d position(s) into global portfolio from broker.", seeded
-                )
+                logger.info("Seeded %d position(s) into global portfolio from broker.", seeded)
             else:
                 logger.info("No open positions found on broker at startup.")
         except Exception:

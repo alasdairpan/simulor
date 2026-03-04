@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from simulor.core.protocols import (
+from simulor.core.models import (
     AlphaModel,
     ExecutionModel,
     PortfolioConstructionModel,

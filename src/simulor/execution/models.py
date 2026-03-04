@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from simulor.core.protocols import ExecutionModel
+from simulor.core.models import ExecutionModel
 from simulor.logging import get_logger
 from simulor.types import Instrument, OrderSide, OrderSpec, OrderType, TimeInForce
 
