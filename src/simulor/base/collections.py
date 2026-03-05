@@ -10,6 +10,8 @@ from typing import TypeVar, overload
 
 T = TypeVar("T")
 
+__all__ = ["ReadOnlySequence"]
+
 
 class ReadOnlySequence(Sequence[T]):
     """Read-only view of a list.

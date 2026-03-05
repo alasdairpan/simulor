@@ -19,7 +19,7 @@ from zoneinfo import ZoneInfo
 from simulor.analytics import BacktestResult
 from simulor.core.connectors import Broker
 from simulor.core.events import DataEvent, EndOfStreamEvent, EventBus, MarketEvent, SystemEvent
-from simulor.core.protocols import Context, Feed
+from simulor.core.models import Context, Feed
 from simulor.data import MarketStore
 from simulor.execution.simulation.broker import SimulatedBroker
 from simulor.logging import get_logger
@@ -110,7 +110,7 @@ class Engine:
         # Event bus for internal event handling
         self._event_bus = EventBus()
 
-        self._data_feed.set_event_bus(self._event_bus)
+        self._data_feed.initialize(self._event_bus)
 
         # Initialize broker with global portfolio
         strategy_portfolios: dict[str, Portfolio] = {}
@@ -286,6 +286,7 @@ class Engine:
         finally:
             self._is_running = False
             self._broker.disconnect()
+
             logger.debug("Engine stopped")
 
     def _handle_data_event(self, event: DataEvent) -> None:

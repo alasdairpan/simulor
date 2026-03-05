@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 # Create module logger
 logger = get_logger(__name__)
 
+__all__ = ["Portfolio"]
+
 
 class Portfolio:
     """Portfolio manager for tracking positions, cash, and portfolio value.
@@ -122,6 +124,29 @@ class Portfolio:
             self._cash,
             self.total_value,
             len(self._positions),
+        )
+
+    def seed_position(self, instrument: Instrument, quantity: Decimal, average_cost: Decimal) -> None:
+        """Directly seed a position with known quantity and cost basis.
+
+        Used at startup in live mode to bootstrap portfolio state from broker.
+        Does **not** touch cash — the caller is responsible for ensuring the
+        cash balance is consistent with the seeded positions.
+
+        Args:
+            instrument: The instrument to seed.
+            quantity: Signed quantity (positive = long, negative = short).
+            average_cost: Average cost basis per unit.
+        """
+        if quantity == 0:
+            return
+        pos = Position(instrument=instrument, quantity=quantity, average_cost=average_cost)
+        self._positions[instrument] = pos
+        logger.debug(
+            "Seeded position: %s qty=%s @ avg_cost=$%s",
+            instrument.display_name,
+            quantity,
+            average_cost,
         )
 
     def mark_to_market(self, prices: Mapping[Instrument, Decimal]) -> None:

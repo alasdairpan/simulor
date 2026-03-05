@@ -15,7 +15,7 @@ from typing import Any
 from simulor.alpha.signal import Signal, SignalType
 from simulor.analytics import Tearsheet
 from simulor.core.events import MarketEvent
-from simulor.core.protocols import AlphaModel
+from simulor.core.models import AlphaModel
 from simulor.data.csv_feed import CsvFeed
 from simulor.engine import Engine
 from simulor.execution import Immediate

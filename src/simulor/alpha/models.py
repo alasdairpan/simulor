@@ -12,12 +12,14 @@ from decimal import Decimal
 
 from simulor.alpha.signal import Signal, SignalType
 from simulor.core.events import MarketEvent
-from simulor.core.protocols import AlphaModel
+from simulor.core.models import AlphaModel
 from simulor.logging import get_logger
 from simulor.types import Instrument, Resolution
 
 # Create module logger
 logger = get_logger(__name__)
+
+__all__ = ["MovingAverageCrossover"]
 
 
 class MovingAverageCrossover(AlphaModel):

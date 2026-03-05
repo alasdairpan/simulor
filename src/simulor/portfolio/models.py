@@ -10,7 +10,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from simulor.core.protocols import PortfolioConstructionModel
+from simulor.core.models import PortfolioConstructionModel
 from simulor.logging import get_logger
 from simulor.types import Instrument
 
@@ -20,6 +20,8 @@ if TYPE_CHECKING:
 
 # Create module logger
 logger = get_logger(__name__)
+
+__all__ = ["PositionType", "EqualWeight"]
 
 
 class PositionType(Enum):

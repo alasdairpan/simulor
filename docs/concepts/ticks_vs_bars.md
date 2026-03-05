@@ -7,7 +7,7 @@ A single executed transaction in the market:
 ```python
 TradeTick(
     timestamp=datetime(2024, 1, 15, 9, 30, 1, 523000),
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.TICK,
     price=Decimal("150.25"),    # Trade execution price
     size=Decimal("100")         # Number of shares/contracts
@@ -27,7 +27,7 @@ A single best bid/offer (BBO) update:
 ```python
 QuoteTick(
     timestamp=datetime(2024, 1, 15, 9, 30, 1, 524000),
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.TICK,
     bid_price=Decimal("150.24"),    # Best bid price
     bid_size=Decimal("500"),        # Size at best bid
@@ -55,7 +55,7 @@ OHLC aggregated from TradeTicks over a time window:
 ```python
 TradeBar(
     timestamp=datetime(2024, 1, 15, 9, 30, 0),  # Bar start time
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.MINUTE,
     open=Decimal("150.25"),     # First trade price in period
     high=Decimal("150.32"),     # Highest trade price in period
@@ -84,7 +84,7 @@ Bid/Ask OHLC aggregated from QuoteTicks over a time window:
 ```python
 QuoteBar(
     timestamp=datetime(2024, 1, 15, 9, 30, 0),  # Bar start time
-    instrument=Instrument.from_symbol("AAPL"),
+    instrument=Instrument.stock("AAPL"),
     resolution=Resolution.MINUTE,
     # Bid side (where you can SELL)
     bid_open=Decimal("150.24"),     # First BBO bid in period

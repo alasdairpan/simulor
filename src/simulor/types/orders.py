@@ -49,9 +49,9 @@ class OrderSpec:
         side: Buy or sell
         quantity: Number of units to trade (always positive)
         order_type: Market, limit, stop, or stop-limit
+        time_in_force: Order duration
         limit_price: Price for limit orders
         stop_price: Trigger price for stop orders
-        time_in_force: Order duration (GTC, DAY, IOC, FOK)
         reason: Optional description of why order was placed
         metadata: Optional additional data for tracking/debugging
     """
@@ -60,7 +60,7 @@ class OrderSpec:
     side: OrderSide
     quantity: Decimal
     order_type: OrderType
-    time_in_force: TimeInForce = TimeInForce.GTC
+    time_in_force: TimeInForce
 
     # Optional price parameters
     limit_price: Decimal | None = None

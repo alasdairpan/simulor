@@ -875,22 +875,29 @@ class ExecutionModel:
 **Simple OrderSpec Construction**:
 
 ```python
+from decimal import Decimal
+
+from simulor.types import Instrument, OrderSide, OrderSpec, OrderType, TimeInForce
+
+aapl = Instrument.stock("AAPL", exchange="NASDAQ")
+
 # Market orders
 order_spec = OrderSpec(
-    symbol='AAPL',
-    side='buy',
-    size=100,
-    type=OrderType.MARKET
+    instrument=aapl,
+    side=OrderSide.BUY,
+    quantity=Decimal("100"),
+    order_type=OrderType.MARKET,
+    time_in_force=TimeInForce.DAY  # Market orders should use DAY or IOC
 )
 
 # Limit orders
 order_spec = OrderSpec(
-    symbol='AAPL',
-    side='buy',
-    size=100,
-    type=OrderType.LIMIT,
-    price=150.00,
-    time_in_force=TimeInForce.GTC
+    instrument=aapl,
+    side=OrderSide.BUY,
+    quantity=Decimal("100"),
+    order_type=OrderType.LIMIT,
+    limit_price=Decimal("150.00"),
+    time_in_force=TimeInForce.GTC  # Limit orders can use GTC
 )
 ```
 
@@ -913,9 +920,25 @@ bracket = exec.bracket_order(
 **OCO Orders** (one-cancels-other):
 
 ```python
+aapl = Instrument.stock("AAPL", exchange="NASDAQ")
+
 oco = exec.oco_order([
-    OrderSpec(symbol='AAPL', side='buy', size=100, type='limit', price=149.00),
-    OrderSpec(symbol='AAPL', side='buy', size=100, type='stop', stop=152.00)
+    OrderSpec(
+        instrument=aapl,
+        side=OrderSide.BUY,
+        quantity=Decimal("100"),
+        order_type=OrderType.LIMIT,
+        limit_price=Decimal("149.00"),
+        time_in_force=TimeInForce.GTC,
+    ),
+    OrderSpec(
+        instrument=aapl,
+        side=OrderSide.BUY,
+        quantity=Decimal("100"),
+        order_type=OrderType.STOP,
+        stop_price=Decimal("152.00"),
+        time_in_force=TimeInForce.DAY,
+    ),
 ])
 # Breakout entry: buy if breaks above 152 OR buy if dips to 149
 ```

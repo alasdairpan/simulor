@@ -1,6 +1,8 @@
 from abc import abstractmethod
 from datetime import timedelta
 
+__all__ = ["LatencyModel", "ConstantLatencyModel"]
+
 
 class LatencyModel:
     """Base class for latency models."""

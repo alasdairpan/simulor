@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulor.types import Instrument
 
+__all__ = ["Position"]
+
 
 @dataclass
 class Position:

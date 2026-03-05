@@ -1,4 +1,4 @@
-"""Simulor: Production-ready event-driven backtesting framework.
+"""Simulor: Event-driven backtesting framework.
 
 Simulor is a high-performance backtesting framework designed for institutional-grade
 quantitative research and algorithmic trading strategy development.
@@ -55,7 +55,7 @@ from simulor.analytics import BacktestResult, StrategyMetrics, Tearsheet
 from simulor.core.events import MarketEvent
 
 # Protocols (for custom implementations)
-from simulor.core.protocols import (
+from simulor.core.models import (
     AlphaModel,
     ExecutionModel,
     PortfolioConstructionModel,

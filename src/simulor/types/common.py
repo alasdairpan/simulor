@@ -5,7 +5,7 @@ This module contains simple enums with NO imports from simulor packages.
 
 from __future__ import annotations
 
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 
 __all__ = [
     "OrderSide",
@@ -76,7 +76,7 @@ class Resolution(IntEnum):
     DAILY = 86400
 
 
-class ColumnName(str, Enum):
+class ColumnName(StrEnum):
     """CSV column names for market data types."""
 
     # Trade bar columns

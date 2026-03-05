@@ -11,12 +11,14 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from simulor.core.protocols import RiskModel
+from simulor.core.models import RiskModel
 from simulor.logging import get_logger
 from simulor.types import Instrument
 
 # Create module logger
 logger = get_logger(__name__)
+
+__all__ = ["PositionLimit"]
 
 
 class PositionLimit(RiskModel):

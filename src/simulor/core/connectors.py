@@ -5,14 +5,18 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from simulor.core.assets import AccountBalance, StockPosition
 from simulor.core.events import EventBus
 from simulor.logging import get_logger
+from simulor.portfolio.manager import Portfolio
 from simulor.types.orders import OrderSpec
 
 if TYPE_CHECKING:
-    from simulor.portfolio.manager import Portfolio
+    from simulor.types import Instrument
 
 logger = get_logger(__name__)
+
+__all__ = ["Connector", "SubmitOrderResult", "Broker"]
 
 
 class Connector(ABC):
@@ -50,10 +54,11 @@ class SubmitOrderResult:
 
 
 class Broker(Connector):
-    """Protocol for broker connectors.
+    """Base class for broker implementations.
 
-    Broker connectors facilitate communication with execution engines to route orders
+    Brokers facilitate communication with execution engines to route orders
     and manage trade executions.
+
     """
 
     _event_bus: EventBus
@@ -137,6 +142,24 @@ class Broker(Connector):
         ...
 
     @abstractmethod
-    def register_order_update_callback(self) -> None:
-        """Register a callback for order updates from the broker."""
+    def get_account_balance(self) -> AccountBalance:
+        """Get a snapshot of the account's overall financial state.
+
+        Returns:
+            AccountBalance containing net assets, total cash, buying power,
+            margin usage, risk level, and per-currency cash breakdown.
+        """
+        ...
+
+    @abstractmethod
+    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
+        """Get current stock holdings.
+
+        Args:
+            instruments: Optional filter; when provided, only positions for
+                the specified instruments are returned.
+
+        Returns:
+            List of StockPosition snapshots, one per held instrument.
+        """
         ...
