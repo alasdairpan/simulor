@@ -356,7 +356,10 @@ class SimulatedBroker(Broker):
         result = []
         for instrument, entry in aggregated.items():
             qty = entry.quantity
-            cost_price = entry.cost_numerator / qty if qty != 0 else Decimal("0")
+            if qty == 0:
+                # Offset long/short positions across strategies should not emit a flat holding.
+                continue
+            cost_price = entry.cost_numerator / qty
             result.append(
                 StockPosition(
                     instrument=instrument,
