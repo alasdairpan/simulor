@@ -340,13 +340,17 @@ class LongbridgeLiveFeed(Feed):
                 best_bid = depth.bids[0]  # First bid (highest price)
                 best_ask = depth.asks[0]  # First ask (lowest price)
 
+                if best_bid.price is None or best_ask.price is None:
+                    logger.debug(f"Depth update for {symbol} has None price, skipping")
+                    return
+
                 timestamp = datetime.now(tz=ZoneInfo("UTC"))
                 tick = QuoteTick(
                     timestamp=timestamp,
                     instrument=instrument,
                     resolution=Resolution.TICK,
-                    bid_price=Decimal(best_bid.position),
-                    ask_price=Decimal(best_ask.position),
+                    bid_price=best_bid.price,
+                    ask_price=best_ask.price,
                     bid_size=Decimal(best_bid.volume),
                     ask_size=Decimal(best_ask.volume),
                 )

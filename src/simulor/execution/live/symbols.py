@@ -8,6 +8,14 @@ from __future__ import annotations
 
 from simulor.types import Instrument
 
+_REGION_CURRENCY: dict[str, str] = {
+    "HK": "HKD",
+    "US": "USD",
+    "SH": "CNY",
+    "SZ": "CNY",
+    "SG": "SGD",
+}
+
 __all__ = ["instrument_to_longbridge_symbol", "longbridge_symbol_to_instrument"]
 
 
@@ -38,8 +46,13 @@ def instrument_to_longbridge_symbol(instrument: Instrument) -> str:
     return f"{instrument.symbol}.{region}"
 
 
-def longbridge_symbol_to_instrument(symbol: str, currency: str = "USD") -> Instrument:
+def longbridge_symbol_to_instrument(symbol: str, currency: str | None = None) -> Instrument:
     """Convert a Longbridge symbol (e.g. ``700.HK``) to a Simulor Instrument.
+
+    Args:
+        symbol: Longbridge symbol in ``TICKER.REGION`` format.
+        currency: ISO currency code. When omitted, the correct default for the
+            region is used (e.g. ``'HKD'`` for ``HK``, ``'USD'`` for ``US``).
 
     Raises:
         ValueError: if the symbol format is invalid or the region is not supported.
@@ -58,8 +71,11 @@ def longbridge_symbol_to_instrument(symbol: str, currency: str = "USD") -> Instr
     exchange = exchange_map.get(region)
     if exchange is None:
         raise ValueError(f"Unsupported Longbridge region: {region!r} in symbol {symbol!r}")
+    resolved_currency = currency if currency is not None else _REGION_CURRENCY.get(region)
+    if resolved_currency is None:
+        raise ValueError(f"Unsupported Longbridge region: {region!r} in symbol {symbol!r}")
     return Instrument.stock(
         symbol=ticker,
         exchange=exchange,
-        currency=currency,
+        currency=resolved_currency,
     )
