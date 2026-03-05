@@ -59,11 +59,6 @@ if TYPE_CHECKING:
 
     from simulor.execution.live.connectors import LongbridgeConnector
 
-# Import AdjustType at runtime for use in default parameter values
-try:
-    from longport.openapi import AdjustType
-except ImportError:
-    AdjustType = None  # type: ignore[assignment,misc]
 
 logger = get_logger(__name__)
 
