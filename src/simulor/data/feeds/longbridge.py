@@ -345,10 +345,10 @@ class LongbridgeLiveFeed(Feed):
                     timestamp=timestamp,
                     instrument=instrument,
                     resolution=Resolution.TICK,
-                    bid_price=Decimal(str(best_bid.position)),
-                    ask_price=Decimal(str(best_ask.position)),
-                    bid_size=Decimal(str(best_bid.volume)),
-                    ask_size=Decimal(str(best_ask.volume)),
+                    bid_price=Decimal(best_bid.position),
+                    ask_price=Decimal(best_ask.position),
+                    bid_size=Decimal(best_bid.volume),
+                    ask_size=Decimal(best_ask.volume),
                 )
 
                 self.publish_market_data(data=[tick], timestamp=timestamp)
@@ -590,11 +590,11 @@ class LongbridgeCandlestickFeed(Feed):
             timestamp=timestamp_utc,
             instrument=instrument,
             resolution=self._resolution,
-            open=Decimal(str(candlestick.open)),
-            high=Decimal(str(candlestick.high)),
-            low=Decimal(str(candlestick.low)),
-            close=Decimal(str(candlestick.close)),
-            volume=Decimal(str(candlestick.volume)),
+            open=candlestick.open,
+            high=candlestick.high,
+            low=candlestick.low,
+            close=candlestick.close,
+            volume=Decimal(candlestick.volume),
         )
 
     def _respect_rate_limit(self) -> None:
