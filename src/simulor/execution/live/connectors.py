@@ -30,14 +30,11 @@ class LongbridgeConnector(Connector):
 
     Usage:
         >>> from longport.openapi import Config
-        >>> # Share connector between feed and broker
-        >>> connector = LongbridgeConnector(Config.from_env())
-        >>> broker = Longbridge(connector=connector)
+        >>> from simulor.execution.live.longbridge import Longbridge
+        >>> broker = Longbridge(config=Config.from_env())
+        >>> broker.connect()
         >>> feed = broker.live_feed(instruments=[...])
-        >>>
-        >>> # Both use the same underlying connection
         >>> feed.start()
-        >>> broker.submit_order(...)
     """
 
     def __init__(self, config: Config) -> None:

@@ -82,23 +82,13 @@ class LongbridgeLiveFeed(Feed):
 
     Example:
         >>> from simulor.types import Instrument
-        >>> from simulor.execution.live.longbridge import LongbridgeConnector
         >>> from simulor.data.feeds import DataType
         >>> from longport.openapi import Config
-        >>>
-        >>> # Create shared connector
-        >>> connector = LongbridgeConnector(Config.from_env())
-        >>> connector.connect()
-        >>>
-        >>> # Create feed and broker using same connector
-        >>> feed = LongbridgeLiveFeed(connector=connector)
-        >>> broker = Longbridge(connector=connector, order_update_callback=...)
-        >>>
-        >>> # Subscribe to instruments
-        >>> instruments = [Instrument.stock('700.HK'), Instrument.stock('AAPL.US')]
-        >>> feed.subscribe(instruments, [DataType.QUOTE, DataType.TRADE])
-        >>>
-        >>> # Both use the same connection
+        >>> from simulor.execution.live.longbridge import Longbridge
+        >>> broker = Longbridge(config=Config.from_env())
+        >>> broker.connect()
+        >>> instruments = [Instrument.stock('700', exchange='HK'), Instrument.stock('AAPL', exchange='NASDAQ')]
+        >>> feed = broker.live_feed(instruments=instruments, data_types=[DataType.QUOTE, DataType.TRADE])
         >>> feed.stream()
     """
 
