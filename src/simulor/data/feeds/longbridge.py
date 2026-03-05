@@ -664,7 +664,14 @@ class LongbridgeCandlestickFeed(Feed):
         else:
             # Pagination needed - split into chunks
             logger.info(f"Fetching {symbol}: estimated {expected_bars} bars, using pagination")
-            chunk_days = 250  # ~250 days = ~1000 bars for daily
+            # Choose chunk size based on resolution to keep each request around ~1000 bars
+            bars_per_day_for_res = bars_per_day.get(self._resolution)
+            if bars_per_day_for_res:
+                # Ensure at least 1 day, and cap at 250 days to preserve prior daily behavior
+                chunk_days = min(250, max(1, 1000 // bars_per_day_for_res))
+            else:
+                # Fallback: retain previous default
+                chunk_days = 250
             current_start = start_date
 
             while current_start <= end_date:
