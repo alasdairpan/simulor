@@ -8,6 +8,7 @@ broker instances to avoid duplicate connections.
 from __future__ import annotations
 
 import importlib
+import threading
 from typing import TYPE_CHECKING
 
 from simulor.core.connectors import Connector
@@ -46,6 +47,7 @@ class LongbridgeConnector(Connector):
         self._config: Config = config
         self._trade_context: TradeContext | None = None
         self._quote_context: QuoteContext | None = None
+        self._init_lock = threading.Lock()
 
     @property
     def config(self) -> Config:
@@ -62,15 +64,17 @@ class LongbridgeConnector(Connector):
             RuntimeError: if the longport package is not installed or connection fails.
         """
         if self._trade_context is None:
-            self._ensure_longport()
-            from longport.openapi import TradeContext
+            with self._init_lock:
+                if self._trade_context is None:
+                    self._ensure_longport()
+                    from longport.openapi import TradeContext
 
-            try:
-                self._trade_context = TradeContext(self._config)
-                logger.info("Longbridge TradeContext initialized")
-            except Exception as exc:
-                logger.error(f"Failed to initialize Longbridge TradeContext: {exc}")
-                raise RuntimeError(f"Failed to connect to Longbridge: {exc}") from exc
+                    try:
+                        self._trade_context = TradeContext(self._config)
+                        logger.info("Longbridge TradeContext initialized")
+                    except Exception as exc:
+                        logger.error(f"Failed to initialize Longbridge TradeContext: {exc}")
+                        raise RuntimeError(f"Failed to connect to Longbridge: {exc}") from exc
 
         return self._trade_context
 
@@ -84,15 +88,17 @@ class LongbridgeConnector(Connector):
             RuntimeError: if the longport package is not installed or connection fails.
         """
         if self._quote_context is None:
-            self._ensure_longport()
-            from longport.openapi import QuoteContext
+            with self._init_lock:
+                if self._quote_context is None:
+                    self._ensure_longport()
+                    from longport.openapi import QuoteContext
 
-            try:
-                self._quote_context = QuoteContext(self._config)
-                logger.info("Longbridge QuoteContext initialized")
-            except Exception as exc:
-                logger.error(f"Failed to initialize Longbridge QuoteContext: {exc}")
-                raise RuntimeError(f"Failed to connect to Longbridge: {exc}") from exc
+                    try:
+                        self._quote_context = QuoteContext(self._config)
+                        logger.info("Longbridge QuoteContext initialized")
+                    except Exception as exc:
+                        logger.error(f"Failed to initialize Longbridge QuoteContext: {exc}")
+                        raise RuntimeError(f"Failed to connect to Longbridge: {exc}") from exc
 
         return self._quote_context
 
