@@ -18,7 +18,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
+from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, SecurityPosition
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.data.feeds import DataType
 from simulor.execution.live.connectors import LongbridgeConnector
@@ -88,7 +88,7 @@ class Longbridge(Broker):
         """Explicitly initialize the connector and seed portfolio from broker.
 
         After establishing the connection, queries the broker for the current
-        account balance and open stock positions and seeds them into the global
+        account balance and open security positions and seeds them into the global
         portfolio.  This ensures the local cache reflects real broker state at
         startup rather than starting from zero.
 
@@ -104,7 +104,7 @@ class Longbridge(Broker):
     def _sync_portfolio_from_broker(self) -> None:
         """Seed the global portfolio from the broker's current account state.
 
-        Fetches account balance and stock positions from the broker API and
+        Fetches account balance and security positions from the broker API and
         populates the local global portfolio.  Emits a warning if the broker
         cash differs from the locally tracked cash so the operator can reconcile.
 
@@ -140,7 +140,7 @@ class Longbridge(Broker):
 
         # --- Position seeding ---
         try:
-            stock_positions = self.get_stock_positions()
+            stock_positions = self.get_security_positions()
             seeded = 0
             for sp in stock_positions:
                 if sp.quantity == 0:
@@ -290,8 +290,8 @@ class Longbridge(Broker):
             cash_infos=cash_infos,
         )
 
-    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
-        """Fetch stock positions from the Longbridge API.
+    def get_security_positions(self, instruments: list[Instrument] | None = None) -> list[SecurityPosition]:
+        """Fetch security positions from the Longbridge API.
 
         Calls /v1/asset/stock. When ``instruments`` is provided, only those
         symbols are queried.
@@ -301,7 +301,7 @@ class Longbridge(Broker):
                 the specified instruments are returned.
 
         Returns:
-            List of StockPosition snapshots.
+            List of SecurityPosition snapshots.
             ``current_price`` is always ``None`` — the stock positions endpoint
             does not include live pricing; use a quote feed for market prices.
 
@@ -321,7 +321,7 @@ class Longbridge(Broker):
             for item in channel.positions:
                 instrument = longbridge_symbol_to_instrument(item.symbol, currency=item.currency)
                 positions.append(
-                    StockPosition(
+                    SecurityPosition(
                         instrument=instrument,
                         currency=item.currency,
                         quantity=item.quantity,

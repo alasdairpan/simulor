@@ -47,29 +47,63 @@ class Instrument:
     # Contract specifications
     contract_size: Decimal | None = None
 
+    @property
+    def multiplier(self) -> Decimal:
+        """Contract multiplier used for notional and PnL calculations."""
+        return self.contract_size or Decimal("1")
+
     def __hash__(self) -> int:
-        """Compute hash based on symbol only."""
-        return hash(self.symbol)
+        """Compute hash using stable instrument identity fields."""
+        return hash(self._identity_key())
 
     def __eq__(self, other: object) -> bool:
-        """Compare instruments based on symbol only."""
+        """Compare instruments using stable instrument identity fields."""
         if not isinstance(other, Instrument):
             return NotImplemented
-        return self.symbol == other.symbol
+        return self._identity_key() == other._identity_key()
+
+    def _identity_key(self) -> tuple[object, ...]:
+        """Return the tuple used for equality and hashing."""
+        if self.asset_type == AssetType.OPTION:
+            return (
+                self.asset_type,
+                self.symbol,
+                self.exchange,
+                self.currency,
+                self.expiry,
+                self.strike,
+                self.option_type,
+            )
+        return (self.asset_type, self.symbol)
 
     def __post_init__(self) -> None:
         """Validate instrument data."""
         if not self.symbol or not self.symbol.strip():
             raise ValueError("Symbol cannot be empty")
 
-        if self.asset_type != AssetType.STOCK:
+        # Keep current implementation scope explicit while enabling options.
+        if self.asset_type not in (AssetType.STOCK, AssetType.OPTION):
             raise NotImplementedError(f"Asset type {self.asset_type.value} is not yet supported.")
 
-        # Validate non-derivative fields
-        if self.asset_type not in (AssetType.OPTION, AssetType.FUTURE) and self.strike is not None:
-            raise ValueError(f"Strike price only valid for options, not {self.asset_type.value}")
-        if self.asset_type not in (AssetType.OPTION, AssetType.FUTURE) and self.option_type is not None:
-            raise ValueError(f"Option type only valid for options, not {self.asset_type.value}")
+        if self.asset_type == AssetType.OPTION:
+            if self.expiry is None:
+                raise ValueError("Option expiry is required")
+            if self.strike is None or self.strike <= 0:
+                raise ValueError("Option strike must be positive")
+            if self.option_type is None:
+                raise ValueError("Option type is required")
+            if self.contract_size is None:
+                object.__setattr__(self, "contract_size", Decimal("100"))
+            elif self.contract_size <= 0:
+                raise ValueError("Contract size must be positive")
+        else:
+            # STOCK validation: derivative fields are invalid.
+            if self.expiry is not None:
+                raise ValueError("Expiry is only valid for options")
+            if self.strike is not None:
+                raise ValueError("Strike price is only valid for options")
+            if self.option_type is not None:
+                raise ValueError("Option type is only valid for options")
 
     @property
     def is_derivative(self) -> bool:
@@ -109,3 +143,44 @@ class Instrument:
             currency=currency,
             tick_size=tick_size,
         )
+
+    @classmethod
+    def option(
+        cls,
+        underlying: str,
+        expiry: datetime,
+        strike: Decimal,
+        option_type: OptionType,
+        exchange: str | None = None,
+        currency: str = "USD",
+        tick_size: Decimal | None = None,
+        contract_size: Decimal | None = Decimal("100"),
+        symbol: str | None = None,
+    ) -> Instrument:
+        """Create an option instrument.
+
+        By default a canonical OCC-style symbol is generated when `symbol`
+        is not explicitly provided.
+        """
+        option_symbol = symbol or cls._to_occ_symbol(underlying=underlying, expiry=expiry, strike=strike, option_type=option_type)
+        return cls(
+            symbol=option_symbol,
+            asset_type=AssetType.OPTION,
+            exchange=exchange,
+            currency=currency,
+            tick_size=tick_size,
+            expiry=expiry,
+            strike=strike,
+            option_type=option_type,
+            contract_size=contract_size,
+        )
+
+    @staticmethod
+    def _to_occ_symbol(underlying: str, expiry: datetime, strike: Decimal, option_type: OptionType) -> str:
+        """Build OCC option symbol from components.
+
+        Format: ROOT + YYMMDD + C/P + strike*1000 (8 digits).
+        """
+        cp = "C" if option_type == OptionType.CALL else "P"
+        strike_millis = int((strike * Decimal("1000")).to_integral_value())
+        return f"{underlying}{expiry.strftime('%y%m%d')}{cp}{strike_millis:08d}"

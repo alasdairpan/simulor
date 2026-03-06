@@ -98,9 +98,9 @@ class Portfolio:
         old_qty = pos.quantity
         pos.update_with_trade(fill.quantity, fill.price)
 
-        # Update cash: buys reduce cash, sells increase cash
-        # TODO: Should consider short sells and margin requirements
-        cash_delta = -fill.quantity * fill.price - fill.commission
+        # Update cash: buys reduce cash, sells increase cash.
+        # Derivative contracts settle notional using contract multiplier.
+        cash_delta = -(fill.quantity * fill.price * fill.instrument.multiplier) - fill.commission
         self.update_cash(cash_delta)
 
         # Record the trade
