@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import heapq
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
 from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, SecurityPosition
@@ -15,6 +18,9 @@ from simulor.execution.simulation.fill_models import FillModel, InstantFillModel
 from simulor.execution.simulation.latency_model import ConstantLatencyModel, LatencyModel
 from simulor.logging import get_logger
 from simulor.types import AssetType, Fill, Instrument, OptionType, OrderSide, OrderSpec
+
+if TYPE_CHECKING:
+    from simulor.portfolio.manager import Portfolio
 
 logger = get_logger(__name__)
 
@@ -409,7 +415,7 @@ class SimulatedBroker(Broker):
     def _settle_option_contract(
         self,
         strategy_name: str,
-        portfolio,
+        portfolio: Portfolio,
         option: Instrument,
         option_qty: Decimal,
         market_event: MarketEvent,

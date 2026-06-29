@@ -26,7 +26,9 @@ from simulor.types import (
 
 def _setup_broker() -> SimulatedBroker:
     broker = SimulatedBroker()
-    broker.initialize(event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={})
+    broker.initialize(
+        event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={}
+    )
     broker.connect()
     return broker
 
@@ -254,7 +256,9 @@ def test_option_buy_cash_check_uses_contract_size() -> None:
 
 def test_short_option_margin_rejects_when_cash_too_low() -> None:
     broker = SimulatedBroker(short_option_margin_ratio=Decimal("0.20"))
-    broker.initialize(event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={})
+    broker.initialize(
+        event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={}
+    )
     broker.connect()
     broker.register_strategy("s1", Decimal("30"))
 
@@ -293,7 +297,9 @@ def test_short_option_margin_rejects_when_cash_too_low() -> None:
 
 def test_short_option_margin_allows_open_when_cash_sufficient() -> None:
     broker = SimulatedBroker(short_option_margin_ratio=Decimal("0.20"))
-    broker.initialize(event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={})
+    broker.initialize(
+        event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={}
+    )
     broker.connect()
     broker.register_strategy("s1", Decimal("50"))
 
@@ -439,7 +445,9 @@ def test_early_exercise_disabled_by_default() -> None:
 
 def test_enabled_early_exercise_settles_itm_option_pre_expiry() -> None:
     broker = SimulatedBroker(enable_early_exercise=True, early_exercise_intrinsic_threshold=Decimal("5"))
-    broker.initialize(event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={})
+    broker.initialize(
+        event_bus=EventBus(), global_portfolio=Portfolio(starting_cash=Decimal("100000")), strategy_portfolios={}
+    )
     broker.connect()
     broker.register_strategy("s1", Decimal("20000"))
     portfolio = broker.strategy_portfolios["s1"]

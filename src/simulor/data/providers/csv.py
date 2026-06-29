@@ -478,9 +478,7 @@ class CSVDataIterator:
             option_type = metadata.get("option_type")
 
             if expiry is None or strike is None or option_type is None:
-                raise ValueError(
-                    f"Option symbol must be OCC-formatted with expiry/strike/right metadata: {symbol!r}"
-                )
+                raise ValueError(f"Option symbol must be OCC-formatted with expiry/strike/right metadata: {symbol!r}")
             if not isinstance(option_type, OptionType):
                 raise ValueError(f"Invalid option type parsed from symbol: {symbol!r}")
 

@@ -162,7 +162,9 @@ class Instrument:
         By default a canonical OCC-style symbol is generated when `symbol`
         is not explicitly provided.
         """
-        option_symbol = symbol or cls._to_occ_symbol(underlying=underlying, expiry=expiry, strike=strike, option_type=option_type)
+        option_symbol = symbol or cls._to_occ_symbol(
+            underlying=underlying, expiry=expiry, strike=strike, option_type=option_type
+        )
         return cls(
             symbol=option_symbol,
             asset_type=AssetType.OPTION,
