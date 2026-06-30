@@ -399,9 +399,9 @@ class LongbridgeLiveFeed(Feed):
             TickDirection enum
         """
         if trade_direction == TradeDirection.Up:  # type: ignore[comparison-overlap]
-            return TickDirection.BUY
+            return TickDirection.BUY  # type: ignore[unreachable]
         elif trade_direction == TradeDirection.Down:  # type: ignore[comparison-overlap]
-            return TickDirection.SELL
+            return TickDirection.SELL  # type: ignore[unreachable]
         else:
             return TickDirection.NEUTRAL
 
