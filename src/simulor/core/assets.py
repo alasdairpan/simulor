@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from simulor.types import Instrument
 
-__all__ = ["RiskLevel", "CashInfo", "AccountBalance", "StockPosition"]
+__all__ = ["RiskLevel", "CashInfo", "AccountBalance", "SecurityPosition"]
 
 
 class RiskLevel(IntEnum):
@@ -90,19 +90,19 @@ class AccountBalance:
 
 
 @dataclass(frozen=True)
-class StockPosition:
-    """Read-only snapshot of a single stock holding.
+class SecurityPosition:
+    """Read-only snapshot of a single security holding.
 
     Attributes:
         instrument: The held instrument.
         currency: Settlement currency for this position.
-        quantity: Total shares currently held (signed; negative = short).
-        available_quantity: Shares available to sell immediately. May be less
+        quantity: Total units/contracts currently held (signed; negative = short).
+        available_quantity: Quantity available to trade immediately. May be less
             than ``quantity`` in live accounts due to T+N settlement restrictions.
             In simulation this always equals ``quantity``.
-            Note: Longbridge may return negative values here when shares have
+            Note: Longbridge may return negative values here when units have
             already been sold but the trade has not yet settled.
-        cost_price: Average cost basis per share.
+        cost_price: Average cost basis per unit/contract.
         current_price: Latest market price, or ``None`` if not yet available
             (e.g. before the first market tick, or when the broker asset API
             does not include live pricing).
@@ -116,15 +116,20 @@ class StockPosition:
     current_price: Decimal | None
 
     @property
+    def contract_size(self) -> Decimal:
+        """Contract multiplier for this position."""
+        return self.instrument.multiplier
+
+    @property
     def market_value(self) -> Decimal | None:
         """Current market value of the position, or ``None`` if price is unknown."""
         if self.current_price is None:
             return None
-        return self.quantity * self.current_price
+        return self.quantity * self.current_price * self.contract_size
 
     @property
     def unrealized_pnl(self) -> Decimal | None:
         """Unrealized profit/loss, or ``None`` if price is unknown."""
         if self.current_price is None:
             return None
-        return (self.current_price - self.cost_price) * self.quantity
+        return (self.current_price - self.cost_price) * self.quantity * self.contract_size

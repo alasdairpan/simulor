@@ -24,11 +24,14 @@ from simulor.data.providers.columns import (
     TRADE_BAR_COLUMNS,
     TRADE_TICK_COLUMNS,
 )
+from simulor.data.providers.symbol_parser import parse_symbol
 from simulor.logging import get_logger
 from simulor.types import (
+    AssetType,
     ColumnName,
     Instrument,
     MarketData,
+    OptionType,
     QuoteBar,
     QuoteTick,
     Resolution,
@@ -463,11 +466,69 @@ class CSVDataIterator:
             Instrument instance
         """
 
-        _ = row
+        parsed_type, metadata = parse_symbol(symbol)
 
-        # Create appropriate instrument type using parsed metadata
-        # TODO: Support more asset types as needed
-        return Instrument.stock(symbol)
+        explicit_type = self._parse_explicit_asset_type(row)
+        asset_type = explicit_type or parsed_type
+
+        # For v1 options support, only OPTION and STOCK are instantiated here.
+        if asset_type == AssetType.OPTION:
+            expiry = metadata.get("expiry")
+            strike = metadata.get("strike")
+            option_type = metadata.get("option_type")
+
+            if expiry is None or strike is None or option_type is None:
+                raise ValueError(f"Option symbol must be OCC-formatted with expiry/strike/right metadata: {symbol!r}")
+            if not isinstance(option_type, OptionType):
+                raise ValueError(f"Invalid option type parsed from symbol: {symbol!r}")
+
+            contract_size = self._parse_optional_decimal(row.get("contract_size"))
+            tick_size = self._parse_optional_decimal(row.get("tick_size"))
+            exchange = row.get("exchange") or None
+            currency = row.get("currency") or "USD"
+
+            return Instrument(
+                symbol=symbol,
+                asset_type=AssetType.OPTION,
+                exchange=exchange,
+                currency=currency,
+                tick_size=tick_size,
+                expiry=expiry,
+                strike=strike,
+                option_type=option_type,
+                contract_size=contract_size,
+            )
+
+        # Keep non-option behavior backward-compatible for now.
+        exchange = row.get("exchange") or None
+        currency = row.get("currency") or "USD"
+        tick_size = self._parse_optional_decimal(row.get("tick_size"))
+        return Instrument.stock(symbol=symbol, exchange=exchange, currency=currency, tick_size=tick_size)
+
+    def _parse_explicit_asset_type(self, row: dict[str, str]) -> AssetType | None:
+        """Parse optional explicit asset type from CSV row."""
+        raw = row.get(self.provider.instrument_type_column)
+        if raw is None:
+            return None
+        value = raw.strip()
+        if not value:
+            return None
+
+        normalized = value.upper()
+        try:
+            return AssetType[normalized]
+        except KeyError as e:
+            raise ValueError(f"Unsupported instrument_type {value!r} in CSV row") from e
+
+    @staticmethod
+    def _parse_optional_decimal(raw: str | None) -> Decimal | None:
+        """Parse optional decimal fields from CSV rows."""
+        if raw is None:
+            return None
+        value = raw.strip()
+        if not value:
+            return None
+        return Decimal(value)
 
     def __del__(self) -> None:
         """Close file handles on cleanup."""

@@ -36,12 +36,12 @@ class Position:
     @property
     def market_value(self) -> Decimal:
         """Compute current market value (qty * price)."""
-        return self.quantity * self.current_price
+        return self.quantity * self.current_price * self.instrument.multiplier
 
     @property
     def unrealized_pnl(self) -> Decimal:
         """Compute unrealized P&L"""
-        return (self.current_price - self.average_cost) * self.quantity
+        return (self.current_price - self.average_cost) * self.quantity * self.instrument.multiplier
 
     def update_with_trade(self, qty: Decimal, price: Decimal) -> None:
         """Update the position with an executed trade (fill).

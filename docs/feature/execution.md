@@ -850,6 +850,41 @@ engine = ExecutionEngine(
 
 ## User-Facing API
 
+### Security Positions API
+
+Broker position snapshots are exposed through a single unified API:
+
+```python
+positions = broker.get_security_positions()
+```
+
+Each item in `positions` is a `SecurityPosition` with:
+
+- `instrument`
+- `currency`
+- `quantity`
+- `available_quantity`
+- `cost_price`
+- `current_price`
+- computed properties: `contract_size`, `market_value`, `unrealized_pnl`
+
+This API works for both stocks and derivatives. For stocks, `contract_size` is `1`.
+For options, `contract_size` is typically `100`, so both `market_value` and
+`unrealized_pnl` automatically scale by contract multiplier.
+
+Example:
+
+```python
+for pos in broker.get_security_positions():
+    print(
+        pos.instrument.display_name,
+        pos.quantity,
+        pos.cost_price,
+        pos.market_value,
+        pos.unrealized_pnl,
+    )
+```
+
 The execution engine provides API for ExecutionModel components to generate OrderSpec. Strategies don't call these methods directly - they work through the pluggable ExecutionModel.
 
 ### OrderSpec Generation

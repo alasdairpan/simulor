@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from simulor.core.assets import AccountBalance, StockPosition
+from simulor.core.assets import AccountBalance, SecurityPosition
 from simulor.core.events import EventBus
 from simulor.logging import get_logger
 from simulor.portfolio.manager import Portfolio
@@ -152,14 +152,14 @@ class Broker(Connector):
         ...
 
     @abstractmethod
-    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
-        """Get current stock holdings.
+    def get_security_positions(self, instruments: list[Instrument] | None = None) -> list[SecurityPosition]:
+        """Get current security holdings.
 
         Args:
             instruments: Optional filter; when provided, only positions for
                 the specified instruments are returned.
 
         Returns:
-            List of StockPosition snapshots, one per held instrument.
+            List of SecurityPosition snapshots, one per held instrument.
         """
         ...

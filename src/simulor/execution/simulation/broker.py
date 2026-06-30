@@ -1,19 +1,26 @@
+from __future__ import annotations
+
 import heapq
 import uuid
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
-from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, StockPosition
+from simulor.core.assets import AccountBalance, CashInfo, RiskLevel, SecurityPosition
 from simulor.core.connectors import Broker, SubmitOrderResult
 from simulor.core.events import EventType, MarketEvent, SystemEvent
+from simulor.data.providers.symbol_parser import parse_symbol
 from simulor.execution.simulation.cost_models import CostModel
 from simulor.execution.simulation.fill_models import FillModel, InstantFillModel
 from simulor.execution.simulation.latency_model import ConstantLatencyModel, LatencyModel
 from simulor.logging import get_logger
-from simulor.types import Fill, Instrument, OrderSide, OrderSpec
+from simulor.types import AssetType, Fill, Instrument, OptionType, OrderSide, OrderSpec
+
+if TYPE_CHECKING:
+    from simulor.portfolio.manager import Portfolio
 
 logger = get_logger(__name__)
 
@@ -54,12 +61,18 @@ class SimulatedBroker(Broker):
         cost_model: CostModel | None = None,
         latency_model: LatencyModel | None = None,
         base_currency: str = "USD",
+        short_option_margin_ratio: Decimal = Decimal("0.20"),
+        enable_early_exercise: bool = False,
+        early_exercise_intrinsic_threshold: Decimal = Decimal("0"),
     ) -> None:
         super().__init__()
         self._fill_model = fill_model or InstantFillModel()
         self._cost_model = cost_model or CostModel()
         self._latency_model = latency_model or ConstantLatencyModel(latency=0)
         self._base_currency = base_currency
+        self._short_option_margin_ratio = short_option_margin_ratio
+        self._enable_early_exercise = enable_early_exercise
+        self._early_exercise_intrinsic_threshold = early_exercise_intrinsic_threshold
 
         # State: Network Simulation
         # Priority Queue for orders "in flight"
@@ -161,6 +174,12 @@ class SimulatedBroker(Broker):
         """
         self._current_time = event.time
 
+        # Optional deterministic early exercise/assignment policy for American-style options.
+        self._process_early_exercise_options(event)
+
+        # Expire option positions before matching new orders for this timestamp.
+        self._process_expired_options(event)
+
         # Process Latency Buffer (Network Layer)
         # Move orders from "In Flight" to "At Exchange"
         self._process_latency_buffer()
@@ -218,6 +237,8 @@ class SimulatedBroker(Broker):
             )
             return
 
+        contract_size = order_spec.instrument.multiplier
+
         # Calculate total commission
         commission = self._cost_model.calculate_total_cost(
             quantity=order_spec.quantity,
@@ -226,7 +247,7 @@ class SimulatedBroker(Broker):
 
         # Check if there's enough cash for buy orders (prevent negative cash)
         if order_spec.side == OrderSide.BUY:
-            cost = order_spec.quantity * fill_price + commission
+            cost = order_spec.quantity * fill_price * contract_size + commission
             if cost > strategy_portfolio.cash:
                 logger.warning(
                     "Insufficient cash for %s: need $%s, have $%s (strategy=%s)",
@@ -240,21 +261,45 @@ class SimulatedBroker(Broker):
                     f"need {cost}, have {strategy_portfolio.cash}"
                 )
         else:  # SELL order
-            # Check if trying to sell more than owned
-            current_position = strategy_portfolio.positions.get(order_spec.instrument)
-            current_qty = current_position.quantity if current_position else Decimal("0")
-            if order_spec.quantity > current_qty:
-                logger.warning(
-                    "Insufficient shares to sell %s: trying to sell %s, have %s (strategy=%s)",
-                    order_spec.instrument.display_name,
-                    order_spec.quantity,
-                    current_qty,
-                    strategy_name,
+            # For now we allow shorting options; stock shorting remains disabled.
+            if order_spec.instrument.asset_type == AssetType.OPTION:
+                current_position = strategy_portfolio.positions.get(order_spec.instrument)
+                current_qty = current_position.quantity if current_position else Decimal("0")
+                opening_short_contracts = self._opening_short_contracts(
+                    current_qty=current_qty,
+                    sell_qty=order_spec.quantity,
                 )
-                raise ValueError(
-                    f"Insufficient shares to sell {order_spec.instrument.display_name}: "
-                    f"trying to sell {order_spec.quantity}, have {current_qty}"
-                )
+                if opening_short_contracts > 0:
+                    required_margin = (
+                        opening_short_contracts * fill_price * contract_size * self._short_option_margin_ratio
+                    )
+                    if required_margin > strategy_portfolio.cash:
+                        logger.warning(
+                            "Insufficient cash for short option margin %s: need $%s, have $%s (strategy=%s)",
+                            order_spec.instrument.display_name,
+                            required_margin,
+                            strategy_portfolio.cash,
+                            strategy_name,
+                        )
+                        raise ValueError(
+                            f"Insufficient cash for short option margin {order_spec.instrument.display_name}: "
+                            f"need {required_margin}, have {strategy_portfolio.cash}"
+                        )
+            else:
+                current_position = strategy_portfolio.positions.get(order_spec.instrument)
+                current_qty = current_position.quantity if current_position else Decimal("0")
+                if order_spec.quantity > current_qty:
+                    logger.warning(
+                        "Insufficient shares to sell %s: trying to sell %s, have %s (strategy=%s)",
+                        order_spec.instrument.display_name,
+                        order_spec.quantity,
+                        current_qty,
+                        strategy_name,
+                    )
+                    raise ValueError(
+                        f"Insufficient shares to sell {order_spec.instrument.display_name}: "
+                        f"trying to sell {order_spec.quantity}, have {current_qty}"
+                    )
 
         # Create signed quantity (positive for buy, negative for sell)
         signed_quantity = order_spec.quantity if order_spec.side == OrderSide.BUY else -order_spec.quantity
@@ -297,6 +342,213 @@ class SimulatedBroker(Broker):
             strategy_name,
         )
 
+    @staticmethod
+    def _opening_short_contracts(current_qty: Decimal, sell_qty: Decimal) -> Decimal:
+        """Return how many sold contracts would newly open short exposure."""
+        if current_qty <= 0:
+            return sell_qty
+        reduced_to_zero = min(current_qty, sell_qty)
+        return sell_qty - reduced_to_zero
+
+    def _process_expired_options(self, event: MarketEvent) -> None:
+        """Settle option positions reaching expiry at this timestamp.
+
+        Current policy:
+        - OTM options expire worthless (position removed at 0).
+        - ITM options are physically settled to underlying at strike.
+        """
+        for strategy_name, portfolio in self.strategy_portfolios.items():
+            # Snapshot items to safely mutate positions via update_position.
+            positions = list(portfolio.positions.items())
+            for instrument, position in positions:
+                if instrument.asset_type != AssetType.OPTION:
+                    continue
+                if position.quantity == 0:
+                    continue
+                if instrument.expiry is None or not self._is_expired(instrument.expiry, event.time):
+                    continue
+                self._settle_option_contract(
+                    strategy_name=strategy_name,
+                    portfolio=portfolio,
+                    option=instrument,
+                    option_qty=position.quantity,
+                    market_event=event,
+                    reason="option_expiry_settlement",
+                )
+
+    def _process_early_exercise_options(self, event: MarketEvent) -> None:
+        """Apply deterministic pre-expiry exercise/assignment when enabled.
+
+        Policy notes:
+        - Disabled by default to preserve existing behavior.
+        - Applies only to options not yet expired.
+        - Triggers when intrinsic value exceeds configured threshold.
+        """
+        if not self._enable_early_exercise:
+            return
+
+        for strategy_name, portfolio in self.strategy_portfolios.items():
+            positions = list(portfolio.positions.items())
+            for instrument, position in positions:
+                if instrument.asset_type != AssetType.OPTION:
+                    continue
+                if position.quantity == 0:
+                    continue
+                if instrument.expiry is None or self._is_expired(instrument.expiry, event.time):
+                    continue
+
+                underlying_price = self._resolve_underlying_price(option=instrument, market_event=event)
+                if underlying_price is None:
+                    continue
+                if not self._should_early_exercise(option=instrument, underlying_price=underlying_price):
+                    continue
+
+                self._settle_option_contract(
+                    strategy_name=strategy_name,
+                    portfolio=portfolio,
+                    option=instrument,
+                    option_qty=position.quantity,
+                    market_event=event,
+                    reason="option_early_exercise_assignment",
+                )
+
+    def _settle_option_contract(
+        self,
+        strategy_name: str,
+        portfolio: Portfolio,
+        option: Instrument,
+        option_qty: Decimal,
+        market_event: MarketEvent,
+        reason: str,
+    ) -> None:
+        """Close option position and settle to underlying when ITM."""
+        # Remove option contract position at zero value.
+        # Fill enforces strictly positive price, so use epsilon and neutralize cash effect.
+        close_price = Decimal("0.000001")
+        option_close_fill = Fill(
+            instrument=option,
+            quantity=-option_qty,
+            price=close_price,
+            commission=Decimal("0"),
+        )
+        portfolio.update_position(option_close_fill)
+        close_multiplier = option.multiplier
+        close_cash_delta = -(option_close_fill.quantity * close_price * close_multiplier)
+        portfolio.update_cash(-close_cash_delta)
+        portfolio.record_state(timestamp=market_event.time)
+
+        underlying_price = self._resolve_underlying_price(option=option, market_event=market_event)
+        if underlying_price is None:
+            logger.warning(
+                "Skipping physical settlement for %s due to missing underlying price.",
+                option.display_name,
+            )
+            return
+
+        if not self._is_in_the_money(option=option, underlying_price=underlying_price):
+            return
+
+        underlying = self._to_underlying_instrument(option)
+        share_qty = abs(option_qty) * option.multiplier
+        settlement_qty = self._settlement_share_quantity(option=option, option_qty=option_qty)
+
+        underlying_fill = Fill(
+            instrument=underlying,
+            quantity=settlement_qty * share_qty,
+            price=option.strike or Decimal("0"),
+            commission=Decimal("0"),
+        )
+        portfolio.update_position(underlying_fill)
+        portfolio.record_state(timestamp=market_event.time)
+
+        self.event_bus.publish(
+            event=SystemEvent(
+                type=EventType.FILL,
+                time=market_event.time,
+                payload={
+                    "strategy_name": strategy_name,
+                    "fill": underlying_fill,
+                    "reason": reason,
+                },
+            )
+        )
+
+    @staticmethod
+    def _is_expired(expiry: datetime, current_time: datetime) -> bool:
+        """Return True when option expiry is reached for current event time."""
+        if expiry.tzinfo is None:
+            return expiry.date() <= current_time.date()
+        return expiry <= current_time
+
+    @staticmethod
+    def _to_underlying_instrument(option: Instrument) -> Instrument:
+        """Build underlying stock instrument from option symbol metadata."""
+        _, metadata = parse_symbol(option.symbol)
+        underlying_symbol = metadata.get("underlying", option.symbol)
+        return Instrument.stock(symbol=underlying_symbol, exchange=option.exchange, currency=option.currency)
+
+    @staticmethod
+    def _resolve_underlying_price(option: Instrument, market_event: MarketEvent) -> Decimal | None:
+        """Resolve underlying spot from the current market event."""
+        underlying = SimulatedBroker._to_underlying_instrument(option)
+
+        trade_tick = market_event.get_last_trade_tick(underlying)
+        if trade_tick and trade_tick.price > 0:
+            return trade_tick.price
+
+        trade_bar = market_event.get_min_res_trade_bar(underlying)
+        if trade_bar and trade_bar.close > 0:
+            return trade_bar.close
+
+        quote_tick = market_event.get_last_quote_tick(underlying)
+        if quote_tick and quote_tick.bid_price > 0 and quote_tick.ask_price > 0:
+            return (quote_tick.bid_price + quote_tick.ask_price) / 2
+
+        quote_bar = market_event.get_min_res_quote_bar(underlying)
+        if quote_bar and quote_bar.bid_close > 0 and quote_bar.ask_close > 0:
+            return quote_bar.mid_close
+
+        return None
+
+    @staticmethod
+    def _is_in_the_money(option: Instrument, underlying_price: Decimal) -> bool:
+        """Check ITM status at expiry using intrinsic-value definition."""
+        strike = option.strike
+        if strike is None:
+            return False
+        if option.option_type == OptionType.CALL:
+            return underlying_price > strike
+        if option.option_type == OptionType.PUT:
+            return underlying_price < strike
+        return False
+
+    def _should_early_exercise(self, option: Instrument, underlying_price: Decimal) -> bool:
+        """Return True when intrinsic value exceeds early-exercise threshold."""
+        strike = option.strike
+        if strike is None:
+            return False
+
+        if option.option_type == OptionType.CALL:
+            intrinsic = max(Decimal("0"), underlying_price - strike)
+        elif option.option_type == OptionType.PUT:
+            intrinsic = max(Decimal("0"), strike - underlying_price)
+        else:
+            return False
+
+        return intrinsic > self._early_exercise_intrinsic_threshold
+
+    @staticmethod
+    def _settlement_share_quantity(option: Instrument, option_qty: Decimal) -> Decimal:
+        """Return settlement share direction for option exercise/assignment.
+
+        Positive means buy underlying shares, negative means sell underlying shares.
+        """
+        if option.option_type == OptionType.CALL:
+            return Decimal("1") if option_qty > 0 else Decimal("-1")
+        if option.option_type == OptionType.PUT:
+            return Decimal("-1") if option_qty > 0 else Decimal("1")
+        return Decimal("0")
+
     def get_account_balance(self) -> AccountBalance:
         """Get a snapshot of the simulated account's financial state.
 
@@ -330,15 +582,15 @@ class SimulatedBroker(Broker):
             cash_infos=(cash_info,),
         )
 
-    def get_stock_positions(self, instruments: list[Instrument] | None = None) -> list[StockPosition]:
-        """Get current simulated stock holdings, aggregated across all strategies.
+    def get_security_positions(self, instruments: list[Instrument] | None = None) -> list[SecurityPosition]:
+        """Get current simulated holdings, aggregated across all strategies.
 
         Args:
             instruments: Optional filter; when provided only the specified
                 instruments are included in the result.
 
         Returns:
-            List of StockPosition snapshots sorted by instrument symbol.
+            List of SecurityPosition snapshots sorted by instrument symbol.
         """
         aggregated: dict[Instrument, _AggregatedPosition] = {}
         for strategy_portfolio in self.strategy_portfolios.values():
@@ -361,7 +613,7 @@ class SimulatedBroker(Broker):
                 continue
             cost_price = entry.cost_numerator / qty
             result.append(
-                StockPosition(
+                SecurityPosition(
                     instrument=instrument,
                     currency=instrument.currency,
                     quantity=qty,
