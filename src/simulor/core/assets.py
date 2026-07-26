@@ -5,8 +5,8 @@ uniformly across both simulated and live broker implementations.
 
 Inspired by the Longbridge asset APIs but simplified to what both execution
 modes need:
-    - /v1/asset/account  → AccountBalance + CashInfo
-    - /v1/asset/stock    → StockPosition
+    - /v1/asset/account  -> AccountBalance + CashInfo
+    - /v1/asset/stock    -> StockPosition
 """
 
 from __future__ import annotations

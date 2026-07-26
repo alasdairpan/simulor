@@ -10,7 +10,7 @@ Key features:
 - 365-day annualization factor for calendar-day data
 
 Design rationale:
-- Stock prices forward-fill on weekends → 0% return (correct)
+- Stock prices forward-fill on weekends -> 0% return (correct)
 - Crypto shows actual returns every calendar day
 - Portfolio volatility captures real daily fluctuations including weekends
 """

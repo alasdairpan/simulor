@@ -63,7 +63,7 @@ class Tearsheet:
         <div class="header">
             <h1>Backtest Tearsheet</h1>
             <div class="metadata">
-                <div><strong>Period:</strong> {start_date} → {end_date}</div>
+                <div><strong>Period:</strong> {start_date} -> {end_date}</div>
                 <div><strong>Duration:</strong> {duration_days} days</div>
                 <div><strong>Initial Capital:</strong> ${self.result.initial_capital:,.2f}</div>
                 <div><strong>Final Equity:</strong> ${final_equity:,.2f}</div>

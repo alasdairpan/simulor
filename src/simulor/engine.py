@@ -5,7 +5,7 @@ all strategy components. It handles:
 - Event loop orchestration: iterate through chronological MarketEvents
 - Subscription-based dispatch: filter events per strategy subscriptions
 - Component lifecycle: initialize and shutdown all models
-- Strategy pipeline: Universe → Alpha → Portfolio → Risk → Execution
+- Strategy pipeline: Universe -> Alpha -> Portfolio -> Risk -> Execution
 - Order routing: forward orders to Broker and route fills back
 """
 
@@ -387,11 +387,11 @@ class Engine:
         """Execute the 5-component strategy pipeline.
 
         Pipeline flow:
-        1. Universe → List[Instrument]
-        2. Alpha → Dict[Instrument, Signal]
-        3. Portfolio → Dict[Instrument, Decimal] (target quantities)
-        4. Risk → Dict[Instrument, Decimal] (constrained targets)
-        5. Execution → List[OrderSpec]
+        1. Universe -> List[Instrument]
+        2. Alpha -> Dict[Instrument, Signal]
+        3. Portfolio -> Dict[Instrument, Decimal] (target quantities)
+        4. Risk -> Dict[Instrument, Decimal] (constrained targets)
+        5. Execution -> List[OrderSpec]
 
         Then route orders to Broker for execution.
 
