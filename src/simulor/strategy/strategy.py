@@ -38,7 +38,7 @@ class Strategy:
     - execution: How to generate orders
 
     The Engine uses this composition to orchestrate the strategy pipeline:
-    universe → alpha → construction → risk → execution → orders
+    universe -> alpha -> construction -> risk -> execution -> orders
 
     Capital Allocation:
     - Strategy does NOT specify its own capital
